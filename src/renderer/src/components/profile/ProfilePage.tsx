@@ -14,46 +14,38 @@ export default function ProfilePage() {
   const inputStyle = {
     backgroundColor: 'var(--bg-tertiary)',
     border: '1px solid var(--border)',
-    color: 'var(--text-primary)'
+    color: 'var(--text-primary)',
+    transition: 'all 0.2s ease'
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div>
-        <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-          Interview Profile
-        </h2>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Set up your profile to personalize AI suggestions during interviews.
-        </p>
-      </div>
-
+    <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
       {/* Role Info */}
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+      <section className="glass-panel p-5 space-y-4">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           Target Role
         </h3>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Role Title
             </label>
             <input
               value={profile.targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
               placeholder="e.g., Senior Software Engineer"
-              className="w-full px-3 py-2 rounded-lg text-sm"
+              className="w-full px-3 py-2 rounded-xl text-sm"
               style={inputStyle}
             />
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Seniority
             </label>
             <select
               value={profile.seniority}
               onChange={(e) => setSeniority(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm"
+              className="w-full px-3 py-2 rounded-xl text-sm"
               style={inputStyle}
             >
               <option value="">Select...</option>
@@ -66,14 +58,14 @@ export default function ProfilePage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Industry
             </label>
             <input
               value={profile.industry}
               onChange={(e) => setIndustry(e.target.value)}
               placeholder="e.g., FinTech, SaaS"
-              className="w-full px-3 py-2 rounded-lg text-sm"
+              className="w-full px-3 py-2 rounded-xl text-sm"
               style={inputStyle}
             />
           </div>
@@ -81,23 +73,23 @@ export default function ProfilePage() {
       </section>
 
       {/* Resume */}
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+      <section className="glass-panel p-5 space-y-3">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           Resume
         </h3>
         <textarea
           value={profile.resumeText}
           onChange={(e) => setResumeText(e.target.value)}
-          placeholder="Paste your resume text here, or upload a file above. Include key experiences, skills, and achievements."
+          placeholder="Paste your resume text here. Include key experiences, skills, and achievements."
           rows={8}
-          className="w-full px-3 py-2 rounded-lg text-sm resize-y"
+          className="w-full px-3 py-2 rounded-xl text-sm resize-y"
           style={inputStyle}
         />
       </section>
 
       {/* Job Description */}
-      <section className="space-y-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+      <section className="glass-panel p-5 space-y-3">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           Job Description
         </h3>
         <textarea
@@ -105,7 +97,7 @@ export default function ProfilePage() {
           onChange={(e) => setJobDescription(e.target.value)}
           placeholder="Paste the job description for the role you're interviewing for."
           rows={6}
-          className="w-full px-3 py-2 rounded-lg text-sm resize-y"
+          className="w-full px-3 py-2 rounded-xl text-sm resize-y"
           style={inputStyle}
         />
       </section>

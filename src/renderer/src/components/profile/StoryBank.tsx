@@ -7,6 +7,13 @@ const TAG_OPTIONS = [
   'time-management', 'customer-focus', 'innovation'
 ]
 
+const STAR_LABELS = [
+  { key: 'situation', label: 'S', color: '#6366f1' },
+  { key: 'task', label: 'T', color: '#8b5cf6' },
+  { key: 'action', label: 'A', color: '#a855f7' },
+  { key: 'result', label: 'R', color: '#c084fc' }
+]
+
 export default function StoryBank() {
   const { profile, addStory, removeStory } = useProfileStore()
   const [isAdding, setIsAdding] = useState(false)
@@ -21,10 +28,7 @@ export default function StoryBank() {
 
   const handleAdd = () => {
     if (!newStory.title.trim()) return
-    addStory({
-      ...newStory,
-      id: `story-${Date.now()}`
-    })
+    addStory({ ...newStory, id: `story-${Date.now()}` })
     setNewStory({ title: '', situation: '', task: '', action: '', result: '', tags: [] })
     setIsAdding(false)
   }
@@ -39,20 +43,21 @@ export default function StoryBank() {
   const inputStyle = {
     backgroundColor: 'var(--bg-tertiary)',
     border: '1px solid var(--border)',
-    color: 'var(--text-primary)'
+    color: 'var(--text-primary)',
+    transition: 'all 0.2s ease'
   }
 
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           STAR Story Bank ({profile.storyBank.length})
         </h3>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="px-3 py-1 rounded-lg text-xs font-medium cursor-pointer"
-            style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+            style={{ background: 'var(--accent-gradient)', color: 'white', boxShadow: 'var(--shadow-glow)' }}
           >
             + Add Story
           </button>
@@ -61,53 +66,34 @@ export default function StoryBank() {
 
       {/* Add form */}
       {isAdding && (
-        <div
-          className="rounded-xl p-4 space-y-3"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
-        >
+        <div className="glass-panel p-5 space-y-3 animate-slideUp">
           <input
             value={newStory.title}
             onChange={(e) => setNewStory((p) => ({ ...p, title: e.target.value }))}
             placeholder="Story title (e.g., 'Led migration to microservices')"
-            className="w-full px-3 py-2 rounded-lg text-sm"
+            className="w-full px-3 py-2 rounded-xl text-sm"
             style={inputStyle}
           />
-          <textarea
-            value={newStory.situation}
-            onChange={(e) => setNewStory((p) => ({ ...p, situation: e.target.value }))}
-            placeholder="Situation: What was the context?"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-y"
-            style={inputStyle}
-          />
-          <textarea
-            value={newStory.task}
-            onChange={(e) => setNewStory((p) => ({ ...p, task: e.target.value }))}
-            placeholder="Task: What was your responsibility?"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-y"
-            style={inputStyle}
-          />
-          <textarea
-            value={newStory.action}
-            onChange={(e) => setNewStory((p) => ({ ...p, action: e.target.value }))}
-            placeholder="Action: What did you do?"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-y"
-            style={inputStyle}
-          />
-          <textarea
-            value={newStory.result}
-            onChange={(e) => setNewStory((p) => ({ ...p, result: e.target.value }))}
-            placeholder="Result: What was the outcome? Include metrics."
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-y"
-            style={inputStyle}
-          />
+          {(['situation', 'task', 'action', 'result'] as const).map((field) => (
+            <textarea
+              key={field}
+              value={newStory[field]}
+              onChange={(e) => setNewStory((p) => ({ ...p, [field]: e.target.value }))}
+              placeholder={`${field.charAt(0).toUpperCase() + field.slice(1)}: ${
+                field === 'situation' ? 'What was the context?' :
+                field === 'task' ? 'What was your responsibility?' :
+                field === 'action' ? 'What did you do?' :
+                'What was the outcome? Include metrics.'
+              }`}
+              rows={2}
+              className="w-full px-3 py-2 rounded-xl text-sm resize-y"
+              style={inputStyle}
+            />
+          ))}
 
           {/* Tags */}
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Tags
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -115,13 +101,11 @@ export default function StoryBank() {
                 <button
                   key={tag}
                   onClick={() => toggleTag(tag)}
-                  className="px-2 py-0.5 rounded text-xs cursor-pointer transition-colors"
+                  className="px-2.5 py-1 rounded-lg text-[11px] cursor-pointer transition-all font-medium"
                   style={{
-                    backgroundColor: newStory.tags.includes(tag)
-                      ? 'var(--accent)'
-                      : 'var(--bg-tertiary)',
-                    color: newStory.tags.includes(tag) ? 'white' : 'var(--text-secondary)',
-                    border: '1px solid var(--border)'
+                    background: newStory.tags.includes(tag) ? 'var(--accent-gradient)' : 'var(--bg-tertiary)',
+                    color: newStory.tags.includes(tag) ? 'white' : 'var(--text-muted)',
+                    border: `1px solid ${newStory.tags.includes(tag) ? 'transparent' : 'var(--border)'}`
                   }}
                 >
                   {tag}
@@ -133,15 +117,15 @@ export default function StoryBank() {
           <div className="flex gap-2">
             <button
               onClick={handleAdd}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium cursor-pointer"
-              style={{ backgroundColor: 'var(--accent)', color: 'white' }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer"
+              style={{ background: 'var(--accent-gradient)', color: 'white' }}
             >
               Save Story
             </button>
             <button
               onClick={() => setIsAdding(false)}
-              className="px-4 py-1.5 rounded-lg text-sm font-medium cursor-pointer"
-              style={{ color: 'var(--text-secondary)' }}
+              className="px-4 py-2 rounded-xl text-sm font-medium cursor-pointer"
+              style={{ color: 'var(--text-muted)' }}
             >
               Cancel
             </button>
@@ -154,39 +138,55 @@ export default function StoryBank() {
         {profile.storyBank.map((story) => (
           <div
             key={story.id}
-            className="rounded-xl p-4"
-            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+            className="glass-panel p-4 transition-all hover:shadow-lg"
+            style={{ cursor: 'default' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.borderColor = 'rgba(124, 92, 252, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.borderColor = 'var(--glass-border)'
+            }}
           >
-            <div className="flex items-start justify-between mb-2">
-              <h4 className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
+            <div className="flex items-start justify-between mb-3">
+              <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                 {story.title}
               </h4>
               <button
                 onClick={() => removeStory(story.id)}
-                className="text-xs px-2 py-0.5 rounded cursor-pointer"
-                style={{ color: 'var(--danger)' }}
+                className="text-[11px] px-2 py-0.5 rounded-lg cursor-pointer transition-colors"
+                style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-subtle)' }}
               >
                 Remove
               </button>
             </div>
 
-            <div className="space-y-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
-              <p><strong>S:</strong> {story.situation}</p>
-              <p><strong>T:</strong> {story.task}</p>
-              <p><strong>A:</strong> {story.action}</p>
-              <p><strong>R:</strong> {story.result}</p>
+            <div className="space-y-2">
+              {STAR_LABELS.map(({ key, label, color }) => {
+                const value = story[key as keyof typeof story] as string
+                if (!value) return null
+                return (
+                  <div key={key} className="flex items-start gap-2 text-xs">
+                    <span
+                      className="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0"
+                      style={{ backgroundColor: `${color}20`, color }}
+                    >
+                      {label}
+                    </span>
+                    <span style={{ color: 'var(--text-secondary)' }}>{value}</span>
+                  </div>
+                )
+              })}
             </div>
 
             {story.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1 mt-3">
                 {story.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-1.5 py-0.5 rounded text-xs"
-                    style={{
-                      backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                      color: 'var(--accent)'
-                    }}
+                    className="px-2 py-0.5 rounded-md text-[10px] font-medium"
+                    style={{ backgroundColor: 'var(--accent-subtle)', color: 'var(--accent)' }}
                   >
                     {tag}
                   </span>
@@ -197,9 +197,11 @@ export default function StoryBank() {
         ))}
 
         {profile.storyBank.length === 0 && !isAdding && (
-          <p className="text-sm text-center py-4" style={{ color: 'var(--text-secondary)' }}>
-            No stories yet. Add your STAR stories to help AI give personalized suggestions.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              No stories yet. Add STAR stories to personalize AI suggestions.
+            </p>
+          </div>
         )}
       </div>
     </section>

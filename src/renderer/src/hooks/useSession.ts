@@ -43,7 +43,8 @@ export function useSession() {
   const startSession = useCallback(async () => {
     clearCurrentAnswer()
     clearTranscript()
-    await window.copilot?.session?.start?.()
+    const result = await window.copilot?.session?.start?.()
+    return result as { success: boolean; error?: string } | undefined
   }, [clearCurrentAnswer, clearTranscript])
 
   const stopSession = useCallback(async () => {

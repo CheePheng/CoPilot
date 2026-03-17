@@ -37,6 +37,13 @@ const overlayApi = {
       ipcRenderer.on('session:status', handler)
       return () => ipcRenderer.removeListener('session:status', handler)
     }
+  },
+  ghost: {
+    onStatusChange: (callback: (enabled: boolean) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, enabled: boolean) => callback(enabled)
+      ipcRenderer.on('ghost:status', handler)
+      return () => ipcRenderer.removeListener('ghost:status', handler)
+    }
   }
 }
 

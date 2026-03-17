@@ -1,4 +1,5 @@
 import { useSessionStore } from '../../stores/sessionStore'
+import { SparklesIcon } from '../ui/Icons'
 
 export default function AnswerStream() {
   const currentAnswer = useSessionStore((s) => s.currentAnswer)
@@ -10,24 +11,30 @@ export default function AnswerStream() {
 
   return (
     <div
-      className="rounded-lg p-3 mb-3"
+      className="rounded-xl p-4 mb-3 animate-fadeIn"
       style={{
-        backgroundColor: 'rgba(99, 102, 241, 0.04)',
-        border: '1px solid rgba(99, 102, 241, 0.1)'
+        background: 'linear-gradient(135deg, rgba(124, 92, 252, 0.06), rgba(139, 92, 246, 0.03))',
+        border: '1px solid rgba(124, 92, 252, 0.15)',
+        boxShadow: '0 0 24px rgba(124, 92, 252, 0.06)'
       }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span
-          className="w-2 h-2 rounded-full animate-pulse"
-          style={{ backgroundColor: 'var(--accent)' }}
-        />
-        <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>
+        <span className="animate-pulseGlow rounded-full p-0.5">
+          <SparklesIcon size={14} className="gradient-text" />
+        </span>
+        <span className="text-xs font-semibold gradient-text">
           Generating answer...
         </span>
+        <div className="flex-1 h-px animate-shimmer rounded" />
       </div>
-      <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
+      <p
+        className="text-sm leading-relaxed whitespace-pre-wrap"
+        style={{ color: 'var(--text-primary)', lineHeight: '1.7' }}
+      >
         {currentAnswer}
-        {status === 'answering' && <span className="animate-pulse">▊</span>}
+        {status === 'answering' && (
+          <span className="inline-block w-1.5 h-4 ml-0.5 rounded-sm animate-breathe" style={{ backgroundColor: 'var(--accent)' }} />
+        )}
       </p>
     </div>
   )

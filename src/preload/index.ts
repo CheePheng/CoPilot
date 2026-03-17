@@ -63,6 +63,24 @@ const api = {
     setUrl: (url: string) => ipcRenderer.invoke('ollama:set-url', url),
     listModels: () => ipcRenderer.invoke('ollama:list-models'),
     checkConnection: () => ipcRenderer.invoke('ollama:check-connection')
+  },
+  ghost: {
+    toggle: () => ipcRenderer.invoke('ghost:toggle'),
+    getStatus: () => ipcRenderer.invoke('ghost:get-status'),
+    set: (enabled: boolean) => ipcRenderer.invoke('ghost:set', enabled),
+    onStatusChange: (callback: (enabled: boolean) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, enabled: boolean) => callback(enabled)
+      ipcRenderer.on('ghost:status', handler)
+      return () => ipcRenderer.removeListener('ghost:status', handler)
+    }
+  },
+  storage: {
+    get: (key: string) => ipcRenderer.invoke('storage:get', key),
+    set: (key: string, value: unknown) => ipcRenderer.invoke('storage:set', key, value),
+    getAll: () => ipcRenderer.invoke('storage:get-all')
+  },
+  profile: {
+    sync: (profile: unknown) => ipcRenderer.invoke('profile:sync', profile)
   }
 }
 

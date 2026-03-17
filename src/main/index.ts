@@ -4,7 +4,7 @@ import { createOverlayWindow } from './windows/overlayWindow'
 import { windowManager } from './windows/windowManager'
 import { registerIpcHandlers } from './ipc/ipcHandlers'
 import { setupTray } from './tray'
-import { registerGlobalShortcuts } from './globalShortcuts'
+import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './globalShortcuts'
 
 app.whenReady().then(() => {
   registerIpcHandlers()
@@ -24,6 +24,10 @@ app.whenReady().then(() => {
       windowManager.setMainWindow(mw)
     }
   })
+})
+
+app.on('will-quit', () => {
+  unregisterGlobalShortcuts()
 })
 
 app.on('window-all-closed', () => {

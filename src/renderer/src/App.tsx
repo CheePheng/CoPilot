@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import StatusBar from './components/layout/StatusBar'
@@ -9,17 +9,28 @@ import SessionControls from './components/session/SessionControls'
 import SettingsPage from './components/settings/SettingsPage'
 import ProfilePage from './components/profile/ProfilePage'
 import MockInterviewPage from './components/mock/MockInterviewPage'
+import ToastContainer from './components/ui/ToastContainer'
+import { HistoryIcon, LightbulbIcon } from './components/ui/Icons'
 import { useSession } from './hooks/useSession'
 import { useAudioCapture } from './hooks/useAudioCapture'
 import { useWebSpeech } from './hooks/useWebSpeech'
 import { useSessionStore } from './stores/sessionStore'
 import { useSettingsStore } from './stores/settingsStore'
+import { useProfileStore } from './stores/profileStore'
 import './types/ipc'
 
 type Page = 'interview' | 'practice' | 'history' | 'profile' | 'settings'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('interview')
+  const loadSettings = useSettingsStore((s) => s.loadFromDisk)
+  const loadProfile = useProfileStore((s) => s.loadFromDisk)
+
+  // Load persisted data on mount
+  useEffect(() => {
+    loadSettings()
+    loadProfile()
+  }, [loadSettings, loadProfile])
 
   return (
     <div className="flex h-screen w-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -32,21 +43,25 @@ export default function App() {
           className="flex-1 overflow-auto p-6"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         >
-          {currentPage === 'interview' && <InterviewPage />}
-          {currentPage === 'practice' && <MockInterviewPage />}
-          {currentPage === 'history' && (
-            <PlaceholderPage
-              title="Session History"
-              description="Review past interview sessions and answers."
-              icon="📋"
-            />
-          )}
-          {currentPage === 'profile' && <ProfilePage />}
-          {currentPage === 'settings' && <SettingsPage />}
+          <div key={currentPage} className="animate-fadeIn h-full">
+            {currentPage === 'interview' && <InterviewPage />}
+            {currentPage === 'practice' && <MockInterviewPage />}
+            {currentPage === 'history' && (
+              <PlaceholderPage
+                title="Session History"
+                description="Start your first interview session to build history."
+                Icon={HistoryIcon}
+              />
+            )}
+            {currentPage === 'profile' && <ProfilePage />}
+            {currentPage === 'settings' && <SettingsPage />}
+          </div>
         </main>
 
         <StatusBar />
       </div>
+
+      <ToastContainer />
     </div>
   )
 }
@@ -58,23 +73,26 @@ function InterviewPage() {
   const status = useSessionStore((s) => s.status)
   const sttProvider = useSettingsStore((s) => s.sttProvider)
 
-  // Auto-start Web Speech API when session is active and using web-speech provider
   const webSpeechEnabled = sttProvider === 'web-speech' && (status === 'listening' || status === 'processing' || status === 'answering')
   useWebSpeech(webSpeechEnabled)
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Session controls bar */}
       <SessionControls audioLevel={audioLevel} />
 
-      {/* Main content */}
       <div className="flex gap-6 flex-1 min-h-0">
         {/* Transcript Panel */}
         <div
           className="flex-1 rounded-xl p-4 flex flex-col"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border)'
+          }}
         >
-          <h2 className="text-base font-semibold mb-3 shrink-0" style={{ color: 'var(--text-primary)' }}>
+          <h2
+            className="text-xs font-semibold mb-3 shrink-0 uppercase tracking-wider"
+            style={{ color: 'var(--text-muted)' }}
+          >
             Live Transcript
           </h2>
           <TranscriptTimeline />
@@ -83,9 +101,15 @@ function InterviewPage() {
         {/* Answer Panel */}
         <div
           className="w-[420px] rounded-xl p-4 flex flex-col"
-          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border)'
+          }}
         >
-          <h2 className="text-base font-semibold mb-3 shrink-0" style={{ color: 'var(--text-primary)' }}>
+          <h2
+            className="text-xs font-semibold mb-3 shrink-0 uppercase tracking-wider"
+            style={{ color: 'var(--text-muted)' }}
+          >
             AI Suggestions
           </h2>
 
@@ -95,11 +119,21 @@ function InterviewPage() {
             {currentAnswerCard && <AnswerCard card={currentAnswerCard} />}
 
             {answerHistory.length === 0 && !currentAnswerCard && (
-              <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>
+              <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="text-4xl mb-4">💡</div>
-                  <p className="text-sm">
-                    Answer suggestions will appear here when questions are detected
+                  <div className="mb-4 flex justify-center">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                      style={{
+                        background: 'var(--accent-subtle)',
+                        boxShadow: 'var(--shadow-glow)'
+                      }}
+                    >
+                      <LightbulbIcon size={24} className="gradient-text" />
+                    </div>
+                  </div>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Suggestions appear when questions are detected
                   </p>
                 </div>
               </div>
@@ -108,7 +142,10 @@ function InterviewPage() {
             {/* Previous answers */}
             {answerHistory.length > 1 && (
               <div className="space-y-3 mt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+                <h3
+                  className="text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--text-muted)' }}
+                >
                   Previous Answers
                 </h3>
                 {answerHistory.slice(0, -1).reverse().map((card, i) => (
@@ -126,20 +163,30 @@ function InterviewPage() {
 function PlaceholderPage({
   title,
   description,
-  icon
+  Icon
 }: {
   title: string
   description: string
-  icon: string
+  Icon: React.ComponentType<{ size?: number; className?: string }>
 }) {
   return (
     <div className="flex items-center justify-center h-full">
       <div className="text-center">
-        <div className="text-5xl mb-4">{icon}</div>
-        <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+        <div className="mb-4 flex justify-center">
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'var(--accent-subtle)',
+              boxShadow: 'var(--shadow-glow)'
+            }}
+          >
+            <Icon size={28} className="gradient-text" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
           {title}
         </h2>
-        <p style={{ color: 'var(--text-secondary)' }}>{description}</p>
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{description}</p>
       </div>
     </div>
   )

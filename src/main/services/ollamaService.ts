@@ -133,13 +133,54 @@ export class OllamaService extends EventEmitter implements AIProvider {
     }
   }
 
-  private parseAnswerResult(text: string, fallbackType: string): AnswerResult {
-    // Try to extract JSON from the response
+  private extractJson(text: string): string | null {
+    // Try full text first
     try {
-      // Look for JSON object in the text
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>
+      JSON.parse(text.trim())
+      return text.trim()
+    } catch {
+      // Not pure JSON, try to extract
+    }
+
+    // Find the first { and use brace counting to find the matching }
+    const start = text.indexOf('{')
+    if (start === -1) return null
+
+    let depth = 0
+    let inString = false
+    let escape = false
+
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i]
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\' && inString) {
+        escape = true
+        continue
+      }
+      if (ch === '"') {
+        inString = !inString
+        continue
+      }
+      if (inString) continue
+      if (ch === '{') depth++
+      else if (ch === '}') {
+        depth--
+        if (depth === 0) {
+          return text.slice(start, i + 1)
+        }
+      }
+    }
+    return null
+  }
+
+  private parseAnswerResult(text: string, fallbackType: string): AnswerResult {
+    try {
+      const jsonStr = this.extractJson(text)
+      if (jsonStr) {
+        const parsed = JSON.parse(jsonStr) as Record<string, unknown>
         return {
           answerType: (parsed.answer_type as string) || fallbackType,
           keyPoints: Array.isArray(parsed.key_points) ? (parsed.key_points as string[]) : [],
@@ -155,7 +196,6 @@ export class OllamaService extends EventEmitter implements AIProvider {
       // JSON parsing failed, use raw text
     }
 
-    // Fallback: use raw text as the answer
     return {
       answerType: fallbackType,
       keyPoints: [],

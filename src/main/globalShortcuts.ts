@@ -14,4 +14,14 @@ export function registerGlobalShortcuts(): void {
       overlay.hide()
     }
   })
+
+  // Toggle ghost mode (screen share invisibility)
+  globalShortcut.register('CmdOrCtrl+Shift+G', () => {
+    const enabled = windowManager.toggleGhostMode()
+    windowManager.sendToAll('ghost:status', enabled)
+  })
+}
+
+export function unregisterGlobalShortcuts(): void {
+  globalShortcut.unregisterAll()
 }

@@ -29,9 +29,22 @@ interface ProfileState {
   addStory: (story: StoryEntry) => void
   updateStory: (id: string, story: Partial<StoryEntry>) => void
   removeStory: (id: string) => void
+  loadFromDisk: () => Promise<void>
 }
 
-export const useProfileStore = create<ProfileState>((set) => ({
+const PROFILE_KEY = 'profile'
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+function debouncedSave(profile: Profile): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    window.copilot?.storage?.set(PROFILE_KEY, profile)
+    window.copilot?.profile?.sync(profile)
+  }, 500)
+}
+
+export const useProfileStore = create<ProfileState>((set, get) => ({
   profile: {
     targetRole: '',
     seniority: '',
@@ -41,21 +54,33 @@ export const useProfileStore = create<ProfileState>((set) => ({
     storyBank: []
   },
 
-  setTargetRole: (role) =>
-    set((state) => ({ profile: { ...state.profile, targetRole: role } })),
-  setSeniority: (seniority) =>
-    set((state) => ({ profile: { ...state.profile, seniority } })),
-  setIndustry: (industry) =>
-    set((state) => ({ profile: { ...state.profile, industry } })),
-  setResumeText: (text) =>
-    set((state) => ({ profile: { ...state.profile, resumeText: text } })),
-  setJobDescription: (text) =>
-    set((state) => ({ profile: { ...state.profile, jobDescription: text } })),
-  addStory: (story) =>
+  setTargetRole: (role) => {
+    set((state) => ({ profile: { ...state.profile, targetRole: role } }))
+    debouncedSave(get().profile)
+  },
+  setSeniority: (seniority) => {
+    set((state) => ({ profile: { ...state.profile, seniority } }))
+    debouncedSave(get().profile)
+  },
+  setIndustry: (industry) => {
+    set((state) => ({ profile: { ...state.profile, industry } }))
+    debouncedSave(get().profile)
+  },
+  setResumeText: (text) => {
+    set((state) => ({ profile: { ...state.profile, resumeText: text } }))
+    debouncedSave(get().profile)
+  },
+  setJobDescription: (text) => {
+    set((state) => ({ profile: { ...state.profile, jobDescription: text } }))
+    debouncedSave(get().profile)
+  },
+  addStory: (story) => {
     set((state) => ({
       profile: { ...state.profile, storyBank: [...state.profile.storyBank, story] }
-    })),
-  updateStory: (id, updates) =>
+    }))
+    debouncedSave(get().profile)
+  },
+  updateStory: (id, updates) => {
     set((state) => ({
       profile: {
         ...state.profile,
@@ -63,12 +88,27 @@ export const useProfileStore = create<ProfileState>((set) => ({
           s.id === id ? { ...s, ...updates } : s
         )
       }
-    })),
-  removeStory: (id) =>
+    }))
+    debouncedSave(get().profile)
+  },
+  removeStory: (id) => {
     set((state) => ({
       profile: {
         ...state.profile,
         storyBank: state.profile.storyBank.filter((s) => s.id !== id)
       }
     }))
+    debouncedSave(get().profile)
+  },
+  loadFromDisk: async () => {
+    try {
+      const data = (await window.copilot?.storage?.get(PROFILE_KEY)) as Profile | null
+      if (data) {
+        set({ profile: data })
+        window.copilot?.profile?.sync(data)
+      }
+    } catch {
+      // First run, no saved profile
+    }
+  }
 }))

@@ -47,6 +47,12 @@ declare global {
 export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const [isListening, setIsListening] = useState(false)
+  const enabledRef = useRef(enabled)
+  const isListeningRef = useRef(false)
+
+  // Keep refs in sync
+  enabledRef.current = enabled
+  isListeningRef.current = isListening
 
   const sendResult = useCallback(
     (text: string, isFinal: boolean, confidence: number) => {
@@ -58,12 +64,18 @@ export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
         timestamp: Date.now(),
         confidence
       }
-
-      // Send to main process via IPC
       window.copilot?.stt?.sendWebSpeechResult?.(result)
     },
     []
   )
+
+  const stop = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort()
+      recognitionRef.current = null
+      setIsListening(false)
+    }
+  }, [])
 
   const start = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
@@ -93,7 +105,6 @@ export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
     }
 
     recognition.onerror = (event: { error: string }) => {
-      // 'no-speech' and 'aborted' are expected during normal usage
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         console.error('Speech recognition error:', event.error)
         window.copilot?.stt?.sendWebSpeechStatus?.('error')
@@ -102,7 +113,7 @@ export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
 
     recognition.onend = () => {
       // Auto-restart if still enabled (Web Speech API stops after silence)
-      if (enabled && isListening) {
+      if (enabledRef.current && isListeningRef.current) {
         try {
           recognition.start()
         } catch {
@@ -117,28 +128,19 @@ export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
 
     recognitionRef.current = recognition
     recognition.start()
-  }, [language, enabled, isListening, sendResult])
+  }, [language, sendResult])
 
-  const stop = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.abort()
-      recognitionRef.current = null
-      setIsListening(false)
-    }
-  }, [])
-
-  // Auto-start/stop based on enabled prop
   useEffect(() => {
-    if (enabled && !isListening) {
+    if (enabled && !isListeningRef.current) {
       start()
-    } else if (!enabled && isListening) {
+    } else if (!enabled && isListeningRef.current) {
       stop()
     }
 
     return () => {
       stop()
     }
-  }, [enabled]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, start, stop])
 
   return { isListening, start, stop }
 }

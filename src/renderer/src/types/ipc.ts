@@ -70,6 +70,20 @@ declare global {
         listModels: () => Promise<string[]>
         checkConnection: () => Promise<boolean>
       }
+      ghost: {
+        toggle: () => Promise<boolean>
+        getStatus: () => Promise<boolean>
+        set: (enabled: boolean) => Promise<boolean>
+        onStatusChange: (callback: (enabled: boolean) => void) => () => void
+      }
+      storage: {
+        get: (key: string) => Promise<unknown>
+        set: (key: string, value: unknown) => Promise<{ success: boolean }>
+        getAll: () => Promise<Record<string, unknown>>
+      }
+      profile: {
+        sync: (profile: unknown) => Promise<{ success: boolean }>
+      }
       transcript?: {
         onUpdate: (callback: (data: TranscriptEntry) => void) => () => void
         onFinal: (callback: (data: TranscriptEntry) => void) => () => void

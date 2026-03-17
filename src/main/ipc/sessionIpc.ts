@@ -3,23 +3,39 @@ import { sessionManager } from '../services/sessionManager'
 
 export function registerSessionIpc(): void {
   ipcMain.handle('session:start', async () => {
-    await sessionManager.startSession()
-    return { success: true }
+    try {
+      await sessionManager.startSession()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
   })
 
   ipcMain.handle('session:stop', async () => {
-    await sessionManager.stopSession()
-    return { success: true }
+    try {
+      await sessionManager.stopSession()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
   })
 
   ipcMain.handle('session:pause', () => {
-    sessionManager.pauseSession()
-    return { success: true }
+    try {
+      sessionManager.pauseSession()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
   })
 
   ipcMain.handle('session:resume', () => {
-    sessionManager.resumeSession()
-    return { success: true }
+    try {
+      sessionManager.resumeSession()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+    }
   })
 
   ipcMain.handle('session:state', () => {

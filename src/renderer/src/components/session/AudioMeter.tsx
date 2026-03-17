@@ -3,29 +3,34 @@ interface Props {
 }
 
 export default function AudioMeter({ level }: Props) {
-  const bars = 12
+  const bars = 20
   const activeBars = Math.round(level * bars)
 
   return (
-    <div className="flex items-center gap-0.5 h-5">
-      {Array.from({ length: bars }).map((_, i) => (
-        <div
-          key={i}
-          className="w-1 rounded-full transition-all duration-75"
-          style={{
-            height: `${40 + (i / bars) * 60}%`,
-            backgroundColor:
-              i < activeBars
-                ? i < bars * 0.6
-                  ? 'var(--success)'
-                  : i < bars * 0.85
-                    ? 'var(--warning)'
-                    : 'var(--danger)'
-                : 'var(--bg-tertiary)',
-            opacity: i < activeBars ? 1 : 0.3
-          }}
-        />
-      ))}
+    <div className="flex items-end gap-[2px] h-6 px-1">
+      {Array.from({ length: bars }).map((_, i) => {
+        const isActive = i < activeBars
+        const ratio = i / bars
+        // Gradient from accent to success
+        const hue = 260 - ratio * 100 // purple to green
+        const height = 30 + Math.sin((i / bars) * Math.PI) * 70
+
+        return (
+          <div
+            key={i}
+            className="w-[3px] rounded-full"
+            style={{
+              height: `${height}%`,
+              backgroundColor: isActive
+                ? `hsl(${hue}, 70%, 60%)`
+                : 'var(--border)',
+              opacity: isActive ? 1 : 0.25,
+              boxShadow: isActive ? `0 0 6px hsl(${hue}, 70%, 60%, 0.4)` : 'none',
+              transition: 'all 0.08s ease'
+            }}
+          />
+        )
+      })}
     </div>
   )
 }

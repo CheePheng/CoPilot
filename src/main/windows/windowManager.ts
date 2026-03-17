@@ -3,9 +3,11 @@ import { BrowserWindow } from 'electron'
 class WindowManager {
   private mainWindow: BrowserWindow | null = null
   private overlayWindow: BrowserWindow | null = null
+  private ghostModeEnabled: boolean = true
 
   setMainWindow(win: BrowserWindow): void {
     this.mainWindow = win
+    win.setContentProtection(this.ghostModeEnabled)
     win.on('closed', () => {
       this.mainWindow = null
     })
@@ -13,9 +15,25 @@ class WindowManager {
 
   setOverlayWindow(win: BrowserWindow): void {
     this.overlayWindow = win
+    win.setContentProtection(this.ghostModeEnabled)
     win.on('closed', () => {
       this.overlayWindow = null
     })
+  }
+
+  setGhostMode(enabled: boolean): void {
+    this.ghostModeEnabled = enabled
+    this.mainWindow?.setContentProtection(enabled)
+    this.overlayWindow?.setContentProtection(enabled)
+  }
+
+  toggleGhostMode(): boolean {
+    this.setGhostMode(!this.ghostModeEnabled)
+    return this.ghostModeEnabled
+  }
+
+  isGhostMode(): boolean {
+    return this.ghostModeEnabled
   }
 
   getMainWindow(): BrowserWindow | null {

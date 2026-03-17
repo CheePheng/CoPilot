@@ -75,8 +75,16 @@ export class SessionManager extends EventEmitter {
   }
 
   private setupPipeline(): void {
+    this.removeAllPipelineListeners()
+
     const stt = this.sttProvider!
     const ai = this.aiProvider!
+
+    // Prevent MaxListeners warnings
+    audioCaptureService.setMaxListeners(20)
+    stt.setMaxListeners(20)
+    questionDetector.setMaxListeners(20)
+    ai.setMaxListeners(20)
 
     // Audio chunks → STT provider
     audioCaptureService.on('audio-chunk', (chunk: Buffer) => {

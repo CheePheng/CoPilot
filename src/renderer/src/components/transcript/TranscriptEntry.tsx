@@ -10,20 +10,22 @@ export default function TranscriptEntry({ entry }: Props) {
 
   return (
     <div
-      className="flex gap-3 py-2 px-3 rounded-lg transition-colors"
+      className="flex gap-3 py-2.5 px-3 rounded-xl transition-all animate-fadeIn"
       style={{
         backgroundColor: isQuestion
-          ? 'rgba(99, 102, 241, 0.08)'
+          ? 'rgba(124, 92, 252, 0.06)'
           : 'transparent',
-        opacity: entry.isFinal ? 1 : 0.6
+        borderLeft: isQuestion ? '2px solid var(--accent)' : '2px solid transparent',
+        opacity: entry.isFinal ? 1 : 0.5
       }}
     >
       <div className="shrink-0 mt-0.5">
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
           style={{
-            backgroundColor: isUser ? 'var(--accent)' : 'var(--bg-tertiary)',
-            color: isUser ? 'white' : 'var(--text-secondary)'
+            background: isUser ? 'var(--accent-gradient)' : 'var(--bg-elevated)',
+            color: isUser ? 'white' : 'var(--text-muted)',
+            boxShadow: isUser ? '0 0 12px rgba(124, 92, 252, 0.2)' : 'none'
           }}
         >
           {isUser ? 'Y' : 'I'}
@@ -33,12 +35,12 @@ export default function TranscriptEntry({ entry }: Props) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span
-            className="text-xs font-medium"
-            style={{ color: isUser ? 'var(--accent)' : 'var(--text-secondary)' }}
+            className="text-[11px] font-semibold"
+            style={{ color: isUser ? 'var(--accent)' : 'var(--text-muted)' }}
           >
             {isUser ? 'You' : 'Interviewer'}
           </span>
-          <span className="text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)', opacity: 0.6 }}>
             {new Date(entry.timestamp).toLocaleTimeString([], {
               hour: '2-digit',
               minute: '2-digit',
@@ -47,14 +49,17 @@ export default function TranscriptEntry({ entry }: Props) {
           </span>
           {isQuestion && (
             <span
-              className="text-xs px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent)' }}
+              className="text-[9px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider"
+              style={{
+                background: 'var(--accent-gradient)',
+                color: 'white'
+              }}
             >
               Question
             </span>
           )}
         </div>
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+        <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>
           {entry.text}
         </p>
       </div>
