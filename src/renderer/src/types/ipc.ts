@@ -24,6 +24,22 @@ export interface StreamChunk {
 export type SessionStatus = 'idle' | 'listening' | 'processing' | 'answering' | 'paused'
 export type AIProviderType = 'ollama' | 'claude'
 export type STTProviderType = 'web-speech' | 'deepgram'
+export type SupportedLanguage = 'javascript' | 'typescript' | 'python' | 'java' | 'cpp'
+
+export interface CodingRequest {
+  questionText: string
+  language: SupportedLanguage
+  inputMethod: 'paste' | 'manual' | 'screenshot'
+  context?: string
+}
+
+export interface CodingResponse {
+  code: string
+  explanation: string
+  timeComplexity: string
+  spaceComplexity: string
+  language: SupportedLanguage
+}
 
 declare global {
   interface Window {
@@ -83,6 +99,13 @@ declare global {
       }
       profile: {
         sync: (profile: unknown) => Promise<{ success: boolean }>
+      }
+      coding: {
+        generate: (request: CodingRequest) => Promise<{ success: boolean }>
+        cancel: () => Promise<{ success: boolean }>
+        onStreamChunk: (callback: (data: StreamChunk) => void) => () => void
+        onComplete: (callback: (data: CodingResponse) => void) => () => void
+        onError: (callback: (error: string) => void) => () => void
       }
       transcript?: {
         onUpdate: (callback: (data: TranscriptEntry) => void) => () => void

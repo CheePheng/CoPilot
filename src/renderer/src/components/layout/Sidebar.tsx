@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   InterviewIcon,
+  CodeIcon,
   PracticeIcon,
   HistoryIcon,
   ProfileIcon,
@@ -9,19 +10,45 @@ import {
   ShieldIcon
 } from '../ui/Icons'
 
-type Page = 'interview' | 'practice' | 'history' | 'profile' | 'settings'
+type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
 
 interface SidebarProps {
   currentPage: Page
   onNavigate: (page: Page) => void
 }
 
-const navItems: { id: Page; label: string; Icon: typeof InterviewIcon }[] = [
-  { id: 'interview', label: 'Interview', Icon: InterviewIcon },
-  { id: 'practice', label: 'Practice', Icon: PracticeIcon },
-  { id: 'history', label: 'History', Icon: HistoryIcon },
-  { id: 'profile', label: 'Profile', Icon: ProfileIcon },
-  { id: 'settings', label: 'Settings', Icon: SettingsIcon }
+interface NavSection {
+  label: string
+  items: { id: Page; label: string; Icon: typeof InterviewIcon }[]
+}
+
+const navSections: NavSection[] = [
+  {
+    label: 'Assist',
+    items: [
+      { id: 'interview', label: 'Interview', Icon: InterviewIcon },
+      { id: 'coding', label: 'Coding', Icon: CodeIcon }
+    ]
+  },
+  {
+    label: 'Prepare',
+    items: [
+      { id: 'practice', label: 'Practice', Icon: PracticeIcon }
+    ]
+  },
+  {
+    label: 'You',
+    items: [
+      { id: 'profile', label: 'Profile', Icon: ProfileIcon },
+      { id: 'history', label: 'History', Icon: HistoryIcon }
+    ]
+  },
+  {
+    label: 'System',
+    items: [
+      { id: 'settings', label: 'Settings', Icon: SettingsIcon }
+    ]
+  }
 ]
 
 export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
@@ -50,39 +77,51 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-0.5">
-        {navItems.map((item) => {
-          const isActive = currentPage === item.id
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
-              style={{
-                backgroundColor: isActive ? 'var(--accent-subtle)' : 'transparent',
-                color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                transition: 'all 0.2s ease',
-                borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                ...(isActive ? { boxShadow: '0 0 20px rgba(124, 92, 252, 0.08)' } : {})
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-                  e.currentTarget.style.transform = 'translateX(2px)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.transform = 'translateX(0)'
-                }
-              }}
+      <nav className="flex-1 space-y-4">
+        {navSections.map((section) => (
+          <div key={section.label}>
+            <p
+              className="text-[9px] font-semibold uppercase tracking-widest px-3 mb-1"
+              style={{ color: 'var(--text-muted)', opacity: 0.6 }}
             >
-              <item.Icon size={18} />
-              {item.label}
-            </button>
-          )
-        })}
+              {section.label}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive = currentPage === item.id
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
+                    style={{
+                      backgroundColor: isActive ? 'var(--accent-subtle)' : 'transparent',
+                      color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)',
+                      transition: 'all 0.2s ease',
+                      borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                      ...(isActive ? { boxShadow: '0 0 20px rgba(124, 92, 252, 0.08)' } : {})
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+                        e.currentTarget.style.transform = 'translateX(2px)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'transparent'
+                        e.currentTarget.style.transform = 'translateX(0)'
+                      }
+                    }}
+                  >
+                    <item.Icon size={18} />
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Bottom controls */}

@@ -1,6 +1,7 @@
 import { useSession } from '../../hooks/useSession'
 import { useToastStore } from '../../stores/toastStore'
 import AudioMeter from './AudioMeter'
+import Button from '../ui/Button'
 import { PlayIcon, PauseIcon, StopIcon } from '../ui/Icons'
 
 interface Props {
@@ -26,67 +27,29 @@ export default function SessionControls({ audioLevel }: Props) {
       style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}
     >
       {!isActive ? (
-        <button
-          onClick={handleStart}
-          className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-          style={{
-            background: 'var(--accent-gradient)',
-            color: 'white',
-            boxShadow: 'var(--shadow-glow)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.02)'
-            e.currentTarget.style.boxShadow = '0 0 32px rgba(124, 92, 252, 0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.boxShadow = 'var(--shadow-glow)'
-          }}
-        >
-          <PlayIcon size={14} />
+        <Button variant="primary" size="md" icon={<PlayIcon size={14} />} onClick={handleStart}>
           Start Session
-        </button>
+        </Button>
       ) : (
         <>
           {status === 'paused' ? (
-            <button
+            <Button
+              variant="success"
+              size="md"
+              icon={<PlayIcon size={13} />}
               onClick={resumeSession}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-              style={{
-                backgroundColor: 'var(--success)',
-                color: 'white',
-                boxShadow: '0 0 16px rgba(16, 185, 129, 0.2)'
-              }}
+              style={{ backgroundColor: 'var(--success)', color: 'white', border: '1px solid transparent', boxShadow: '0 0 16px rgba(16, 185, 129, 0.2)' }}
             >
-              <PlayIcon size={13} />
               Resume
-            </button>
+            </Button>
           ) : (
-            <button
-              onClick={pauseSession}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-              style={{
-                backgroundColor: 'var(--warning-subtle)',
-                color: 'var(--warning)',
-                border: '1px solid rgba(245, 158, 11, 0.2)'
-              }}
-            >
-              <PauseIcon size={13} />
+            <Button variant="warning" size="md" icon={<PauseIcon size={13} />} onClick={pauseSession}>
               Pause
-            </button>
+            </Button>
           )}
-          <button
-            onClick={stopSession}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'var(--danger-subtle)',
-              color: 'var(--danger)',
-              border: '1px solid rgba(239, 68, 68, 0.2)'
-            }}
-          >
-            <StopIcon size={13} />
+          <Button variant="danger" size="md" icon={<StopIcon size={13} />} onClick={stopSession}>
             Stop
-          </button>
+          </Button>
         </>
       )}
 

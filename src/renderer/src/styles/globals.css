@@ -162,6 +162,19 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
+/* Button press microinteraction */
+button:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Selection */
 ::selection {
   background: var(--accent-subtle);

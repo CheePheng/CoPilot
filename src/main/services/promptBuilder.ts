@@ -1,5 +1,11 @@
 import type { DetectedQuestion } from './questionDetector'
 
+export interface KnowledgeSnippet {
+  id: string
+  key: string
+  value: string
+}
+
 export interface UserProfile {
   targetRole: string
   seniority: string
@@ -7,6 +13,7 @@ export interface UserProfile {
   resumeText: string
   jobDescription: string
   storyBank: StoryEntry[]
+  knowledgeSnippets?: KnowledgeSnippet[]
 }
 
 export interface StoryEntry {
@@ -58,6 +65,16 @@ ${profile.storyBank
   )
   .join('\n')}
 </story_bank>
+${
+  profile.knowledgeSnippets?.length
+    ? `<knowledge_context>
+${profile.knowledgeSnippets
+  .filter((s) => s.key && s.value)
+  .map((s) => `<fact key="${s.key}">${s.value}</fact>`)
+  .join('\n')}
+</knowledge_context>`
+    : ''
+}
 </user_profile>`
 }
 

@@ -81,6 +81,25 @@ const api = {
   },
   profile: {
     sync: (profile: unknown) => ipcRenderer.invoke('profile:sync', profile)
+  },
+  coding: {
+    generate: (request: unknown) => ipcRenderer.invoke('coding:generate', request),
+    cancel: () => ipcRenderer.invoke('coding:cancel'),
+    onStreamChunk: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('coding:stream-chunk', handler)
+      return () => ipcRenderer.removeListener('coding:stream-chunk', handler)
+    },
+    onComplete: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('coding:complete', handler)
+      return () => ipcRenderer.removeListener('coding:complete', handler)
+    },
+    onError: (callback: (error: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
+      ipcRenderer.on('coding:error', handler)
+      return () => ipcRenderer.removeListener('coding:error', handler)
+    }
   }
 }
 

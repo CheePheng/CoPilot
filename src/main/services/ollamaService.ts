@@ -93,28 +93,44 @@ export class OllamaService extends EventEmitter implements AIProvider {
       const decoder = new TextDecoder()
       let fullText = ''
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+      // Stream timeout: abort if no chunk received in 30s
+      let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+      const resetTimeout = () => {
+        if (timeoutTimer) clearTimeout(timeoutTimer)
+        timeoutTimer = setTimeout(() => {
+          this.currentAbortController?.abort()
+        }, 30000)
+      }
 
-        const chunk = decoder.decode(value, { stream: true })
-        // Ollama streams NDJSON (one JSON object per line)
-        const lines = chunk.split('\n').filter((l) => l.trim())
+      try {
+        resetTimeout()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          resetTimeout()
 
-        for (const line of lines) {
-          try {
-            const parsed = JSON.parse(line) as {
-              message?: { content: string }
-              done: boolean
+          const chunk = decoder.decode(value, { stream: true })
+          // Ollama streams NDJSON (one JSON object per line)
+          const lines = chunk.split('\n').filter((l) => l.trim())
+
+          for (const line of lines) {
+            try {
+              const parsed = JSON.parse(line) as {
+                message?: { content: string }
+                done: boolean
+              }
+              if (parsed.message?.content) {
+                fullText += parsed.message.content
+                this.emit('stream-chunk', { text: parsed.message.content, done: false })
+              }
+            } catch {
+              // Skip malformed lines
             }
-            if (parsed.message?.content) {
-              fullText += parsed.message.content
-              this.emit('stream-chunk', { text: parsed.message.content, done: false })
-            }
-          } catch {
-            // Skip malformed lines
           }
         }
+      } finally {
+        if (timeoutTimer) clearTimeout(timeoutTimer)
+        reader.releaseLock()
       }
 
       // Try to parse structured JSON from the full response
@@ -124,6 +140,8 @@ export class OllamaService extends EventEmitter implements AIProvider {
       this.emit('status', 'idle')
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
+        this.emit('error', new Error('Stream timed out — no response from Ollama in 30 seconds'))
+        this.emit('status', 'error')
         return
       }
       this.emit('error', error)

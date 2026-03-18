@@ -1,6 +1,9 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'fs'
+import { dirname } from 'path'
+
+const SCHEMA_VERSION = 1
 
 class StorageService {
   private filePath: string
@@ -15,18 +18,54 @@ class StorageService {
     try {
       if (existsSync(this.filePath)) {
         const raw = readFileSync(this.filePath, 'utf-8')
-        this.data = JSON.parse(raw) as Record<string, unknown>
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+        this.data = parsed
       }
     } catch {
-      this.data = {}
+      // Corrupted file — try backup
+      const backupPath = this.filePath + '.bak'
+      try {
+        if (existsSync(backupPath)) {
+          const raw = readFileSync(backupPath, 'utf-8')
+          this.data = JSON.parse(raw) as Record<string, unknown>
+        }
+      } catch {
+        this.data = {}
+      }
+    }
+
+    // Ensure schema version
+    if (!this.data._schemaVersion) {
+      this.data._schemaVersion = SCHEMA_VERSION
     }
   }
 
   private save(): void {
     try {
-      writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), 'utf-8')
-    } catch {
-      // Silent fail — data directory may not exist yet on first run
+      // Ensure directory exists
+      const dir = dirname(this.filePath)
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+      }
+
+      // Atomic write: write to temp file then rename
+      const tmpPath = this.filePath + '.tmp'
+      writeFileSync(tmpPath, JSON.stringify(this.data, null, 2), 'utf-8')
+
+      // Create backup of current file before replacing
+      if (existsSync(this.filePath)) {
+        try {
+          const backupPath = this.filePath + '.bak'
+          writeFileSync(backupPath, readFileSync(this.filePath))
+        } catch {
+          // Backup failure is non-critical
+        }
+      }
+
+      // Atomic rename
+      renameSync(tmpPath, this.filePath)
+    } catch (error) {
+      console.error('StorageService: Failed to save data', error)
     }
   }
 

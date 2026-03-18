@@ -5,6 +5,7 @@ import { registerSessionIpc } from './sessionIpc'
 import { registerAiIpc } from './aiIpc'
 import { storageService } from '../services/storageService'
 import { sessionManager } from '../services/sessionManager'
+import { codingService, type CodingRequest } from '../services/codingService'
 
 export function registerIpcHandlers(): void {
   // Overlay controls
@@ -63,6 +64,52 @@ export function registerIpcHandlers(): void {
   // Profile sync to main process
   ipcMain.handle('profile:sync', (_event, profile: unknown) => {
     sessionManager.setProfile(profile as Parameters<typeof sessionManager.setProfile>[0])
+    return { success: true }
+  })
+
+  // Coding mode
+  ipcMain.handle('coding:generate', async (_event, request: CodingRequest) => {
+    try {
+      // Sync provider setting
+      const settings = storageService.get('settings') as Record<string, unknown> | undefined
+      const provider = (settings?.aiProvider as string) || 'ollama'
+      codingService.setProvider(provider as 'ollama' | 'claude')
+
+      // Wire up events for this request
+      const onChunk = (data: { text: string; done: boolean }) => {
+        windowManager.sendToAll('coding:stream-chunk', data)
+      }
+      const onComplete = (result: unknown) => {
+        windowManager.sendToAll('coding:complete', result)
+        cleanup()
+      }
+      const onError = (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error)
+        windowManager.sendToAll('coding:error', message)
+        cleanup()
+      }
+
+      const cleanup = () => {
+        codingService.removeListener('stream-chunk', onChunk)
+        codingService.removeListener('coding-complete', onComplete)
+        codingService.removeListener('error', onError)
+      }
+
+      codingService.on('stream-chunk', onChunk)
+      codingService.on('coding-complete', onComplete)
+      codingService.on('error', onError)
+
+      await codingService.generateCode(request)
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('coding:error', message)
+      return { success: false, error: message }
+    }
+  })
+
+  ipcMain.handle('coding:cancel', () => {
+    codingService.cancelCurrent()
     return { success: true }
   })
 

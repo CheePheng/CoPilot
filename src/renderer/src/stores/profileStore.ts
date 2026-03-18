@@ -10,6 +10,12 @@ export interface StoryEntry {
   tags: string[]
 }
 
+export interface KnowledgeSnippet {
+  id: string
+  key: string
+  value: string
+}
+
 export interface Profile {
   targetRole: string
   seniority: string
@@ -17,6 +23,7 @@ export interface Profile {
   resumeText: string
   jobDescription: string
   storyBank: StoryEntry[]
+  knowledgeSnippets: KnowledgeSnippet[]
 }
 
 interface ProfileState {
@@ -29,6 +36,9 @@ interface ProfileState {
   addStory: (story: StoryEntry) => void
   updateStory: (id: string, story: Partial<StoryEntry>) => void
   removeStory: (id: string) => void
+  addKnowledgeSnippet: (snippet: KnowledgeSnippet) => void
+  updateKnowledgeSnippet: (id: string, updates: Partial<KnowledgeSnippet>) => void
+  removeKnowledgeSnippet: (id: string) => void
   loadFromDisk: () => Promise<void>
 }
 
@@ -51,7 +61,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     industry: '',
     resumeText: '',
     jobDescription: '',
-    storyBank: []
+    storyBank: [],
+    knowledgeSnippets: []
   },
 
   setTargetRole: (role) => {
@@ -96,6 +107,32 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       profile: {
         ...state.profile,
         storyBank: state.profile.storyBank.filter((s) => s.id !== id)
+      }
+    }))
+    debouncedSave(get().profile)
+  },
+  addKnowledgeSnippet: (snippet) => {
+    set((state) => ({
+      profile: { ...state.profile, knowledgeSnippets: [...state.profile.knowledgeSnippets, snippet] }
+    }))
+    debouncedSave(get().profile)
+  },
+  updateKnowledgeSnippet: (id, updates) => {
+    set((state) => ({
+      profile: {
+        ...state.profile,
+        knowledgeSnippets: state.profile.knowledgeSnippets.map((s) =>
+          s.id === id ? { ...s, ...updates } : s
+        )
+      }
+    }))
+    debouncedSave(get().profile)
+  },
+  removeKnowledgeSnippet: (id) => {
+    set((state) => ({
+      profile: {
+        ...state.profile,
+        knowledgeSnippets: state.profile.knowledgeSnippets.filter((s) => s.id !== id)
       }
     }))
     debouncedSave(get().profile)

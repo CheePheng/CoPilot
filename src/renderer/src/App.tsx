@@ -7,6 +7,7 @@ import AnswerStream from './components/answer/AnswerStream'
 import AnswerCard from './components/answer/AnswerCard'
 import SessionControls from './components/session/SessionControls'
 import ToastContainer from './components/ui/ToastContainer'
+import OnboardingModal from './components/onboarding/OnboardingModal'
 import { ErrorBoundary } from './components/ui'
 import { HistoryIcon, LightbulbIcon } from './components/ui/Icons'
 import { SkeletonBlock } from './components/ui/Skeleton'
@@ -21,22 +22,35 @@ const SettingsPage = lazy(() => import('./components/settings/SettingsPage'))
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'))
 const MockInterviewPage = lazy(() => import('./components/mock/MockInterviewPage'))
 const CodingPage = lazy(() => import('./components/coding/CodingPage'))
+const HistoryPage = lazy(() => import('./components/history/HistoryPage'))
 
 type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('interview')
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const loadSettings = useSettingsStore((s) => s.loadFromDisk)
   const loadProfile = useProfileStore((s) => s.loadFromDisk)
 
-  // Load persisted data on mount
+  // Load persisted data on mount and check onboarding
   useEffect(() => {
     loadSettings()
     loadProfile()
+
+    // Check if onboarding has been completed
+    window.copilot?.storage?.get?.('hasCompletedOnboarding').then((val) => {
+      if (!val) setShowOnboarding(true)
+    })
   }, [loadSettings, loadProfile])
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false)
+    window.copilot?.storage?.set?.('hasCompletedOnboarding', true)
+  }
 
   return (
     <div className="flex h-screen w-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -52,13 +66,7 @@ export default function App() {
                 {currentPage === 'interview' && <InterviewPage />}
                 {currentPage === 'coding' && <CodingPage />}
                 {currentPage === 'practice' && <MockInterviewPage />}
-                {currentPage === 'history' && (
-                  <PlaceholderPage
-                    title="Session History"
-                    description="Start your first interview session to build history."
-                    Icon={HistoryIcon}
-                  />
-                )}
+                {currentPage === 'history' && <HistoryPage />}
                 {currentPage === 'profile' && <ProfilePage />}
                 {currentPage === 'settings' && <SettingsPage />}
               </Suspense>

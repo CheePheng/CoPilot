@@ -1,10 +1,11 @@
 import { useSessionStore } from '../../stores/sessionStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 
-type Page = 'interview' | 'practice' | 'history' | 'profile' | 'settings'
+type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
 
 const pageLabels: Record<Page, string> = {
   interview: 'Live Interview',
+  coding: 'Coding Mode',
   practice: 'Practice Mode',
   history: 'Session History',
   profile: 'Profile',
