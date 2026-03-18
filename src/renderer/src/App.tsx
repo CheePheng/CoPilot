@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import StatusBar from './components/layout/StatusBar'
@@ -6,12 +6,10 @@ import TranscriptTimeline from './components/transcript/TranscriptTimeline'
 import AnswerStream from './components/answer/AnswerStream'
 import AnswerCard from './components/answer/AnswerCard'
 import SessionControls from './components/session/SessionControls'
-import SettingsPage from './components/settings/SettingsPage'
-import ProfilePage from './components/profile/ProfilePage'
-import MockInterviewPage from './components/mock/MockInterviewPage'
 import ToastContainer from './components/ui/ToastContainer'
+import { ErrorBoundary } from './components/ui'
 import { HistoryIcon, LightbulbIcon } from './components/ui/Icons'
-import { useSession } from './hooks/useSession'
+import { SkeletonBlock } from './components/ui/Skeleton'
 import { useAudioCapture } from './hooks/useAudioCapture'
 import { useWebSpeech } from './hooks/useWebSpeech'
 import { useSessionStore } from './stores/sessionStore'
@@ -19,7 +17,12 @@ import { useSettingsStore } from './stores/settingsStore'
 import { useProfileStore } from './stores/profileStore'
 import './types/ipc'
 
-type Page = 'interview' | 'practice' | 'history' | 'profile' | 'settings'
+const SettingsPage = lazy(() => import('./components/settings/SettingsPage'))
+const ProfilePage = lazy(() => import('./components/profile/ProfilePage'))
+const MockInterviewPage = lazy(() => import('./components/mock/MockInterviewPage'))
+const CodingPage = lazy(() => import('./components/coding/CodingPage'))
+
+type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('interview')
@@ -44,17 +47,22 @@ export default function App() {
           style={{ backgroundColor: 'var(--bg-primary)' }}
         >
           <div key={currentPage} className="animate-fadeIn h-full">
-            {currentPage === 'interview' && <InterviewPage />}
-            {currentPage === 'practice' && <MockInterviewPage />}
-            {currentPage === 'history' && (
-              <PlaceholderPage
-                title="Session History"
-                description="Start your first interview session to build history."
-                Icon={HistoryIcon}
-              />
-            )}
-            {currentPage === 'profile' && <ProfilePage />}
-            {currentPage === 'settings' && <SettingsPage />}
+            <ErrorBoundary>
+              <Suspense fallback={<PageSkeleton />}>
+                {currentPage === 'interview' && <InterviewPage />}
+                {currentPage === 'coding' && <CodingPage />}
+                {currentPage === 'practice' && <MockInterviewPage />}
+                {currentPage === 'history' && (
+                  <PlaceholderPage
+                    title="Session History"
+                    description="Start your first interview session to build history."
+                    Icon={HistoryIcon}
+                  />
+                )}
+                {currentPage === 'profile' && <ProfilePage />}
+                {currentPage === 'settings' && <SettingsPage />}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
 
@@ -155,6 +163,18 @@ function InterviewPage() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function PageSkeleton() {
+  return (
+    <div className="space-y-4 p-4">
+      <SkeletonBlock style={{ height: '48px' }} />
+      <div className="flex gap-4">
+        <SkeletonBlock className="flex-1" style={{ height: '300px' }} />
+        <SkeletonBlock style={{ height: '300px', width: '420px' }} />
       </div>
     </div>
   )
