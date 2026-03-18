@@ -14,6 +14,7 @@ interface CodingState {
   streamText: string
   isStreaming: boolean
   error: string | null
+  imagePreview: { base64: string; mimeType: string } | null
 
   setQuestion: (q: string) => void
   setLanguage: (l: SupportedLanguage) => void
@@ -27,6 +28,7 @@ interface CodingState {
     spaceComplexity: string
   }) => void
   setError: (error: string) => void
+  setImagePreview: (img: { base64: string; mimeType: string } | null) => void
   reset: () => void
 }
 
@@ -41,10 +43,12 @@ export const useCodingStore = create<CodingState>((set) => ({
   streamText: '',
   isStreaming: false,
   error: null,
+  imagePreview: null,
 
   setQuestion: (question) => set({ question }),
   setLanguage: (language) => set({ language }),
   setInputMethod: (inputMethod) => set({ inputMethod }),
+  setImagePreview: (imagePreview) => set({ imagePreview }),
 
   startGeneration: () =>
     set({
@@ -80,6 +84,7 @@ export const useCodingStore = create<CodingState>((set) => ({
       spaceComplexity: '',
       streamText: '',
       isStreaming: false,
-      error: null
+      error: null,
+      imagePreview: null
     })
 }))

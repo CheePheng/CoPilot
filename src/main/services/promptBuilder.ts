@@ -130,6 +130,57 @@ Then score using the rubric and provide 3 concrete improvements + a rewritten "g
 </mock_interview>`
 }
 
+export function buildMockQuestionPrompt(
+  targetRole: string,
+  focusAreas: string[],
+  difficulty: 'easy' | 'medium' | 'hard',
+  previousQuestions: string[]
+): string {
+  const avoidList = previousQuestions.length > 0
+    ? `\n<avoid_repeats>\n${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}\n</avoid_repeats>`
+    : ''
+
+  return `<mock_question_generation>
+<target_role>${targetRole || 'Software Engineer'}</target_role>
+<focus_areas>${focusAreas.join(', ') || 'behavioral'}</focus_areas>
+<difficulty>${difficulty}</difficulty>
+${avoidList}
+
+<instructions>
+Generate ONE interview question for the target role.
+- Match the difficulty level
+- Focus on the specified areas
+- Do NOT repeat any previously asked questions
+- Output ONLY the question text, nothing else — no preamble, no quotes, no numbering
+</instructions>
+</mock_question_generation>`
+}
+
+export function buildMockEvaluationPrompt(
+  question: string,
+  answer: string,
+  targetRole: string
+): string {
+  return `<mock_evaluation>
+<target_role>${targetRole || 'Software Engineer'}</target_role>
+<question>${question}</question>
+<candidate_answer>${answer}</candidate_answer>
+
+<rubric>
+Score each dimension 0-10:
+- clarity: How clear and understandable is the answer?
+- evidence: Does the answer use specific examples, metrics, or data?
+- structure: Is the answer well-organized (e.g., STAR format)?
+- authenticity: Does the answer feel genuine and unrehearsed?
+</rubric>
+
+<instructions>
+Evaluate the candidate's answer. You MUST respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
+{"clarity":N,"evidence":N,"structure":N,"authenticity":N,"strengths":["strength1","strength2"],"improvements":["improvement1","improvement2"],"gold_answer":"A concise, improved version of their answer"}
+</instructions>
+</mock_evaluation>`
+}
+
 export const ANSWER_TOOL_SCHEMA = {
   name: 'provide_answer',
   description:

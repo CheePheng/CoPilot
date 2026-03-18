@@ -41,6 +41,42 @@ export interface CodingResponse {
   language: SupportedLanguage
 }
 
+export interface SessionRecord {
+  id: string
+  type: 'interview' | 'coding'
+  date: string
+  duration: number
+  questionCount: number
+  questions: Array<{ question: string; answer: string; type: string }>
+  transcript: Array<{ speaker: string; text: string; timestamp: number }>
+  metrics: {
+    avgScore?: number
+    questionTypeBreakdown: Record<string, number>
+  }
+}
+
+export interface MockEvaluation {
+  clarity: number
+  evidence: number
+  structure: number
+  authenticity: number
+  strengths: string[]
+  improvements: string[]
+  goldAnswer: string
+}
+
+export interface MockConfig {
+  targetRole: string
+  focusAreas: string[]
+  difficulty: 'easy' | 'medium' | 'hard'
+  previousQuestions: string[]
+}
+
+export interface ImageData {
+  base64: string
+  mimeType: string
+}
+
 declare global {
   interface Window {
     copilot: {
@@ -105,6 +141,24 @@ declare global {
         cancel: () => Promise<{ success: boolean }>
         onStreamChunk: (callback: (data: StreamChunk) => void) => () => void
         onComplete: (callback: (data: CodingResponse) => void) => () => void
+        onError: (callback: (error: string) => void) => () => void
+        pickImage: () => Promise<ImageData | null>
+        captureScreen: () => Promise<ImageData | null>
+        generateFromImage: (request: CodingRequest & { image: ImageData }) => Promise<{ success: boolean }>
+      }
+      history: {
+        get: () => Promise<SessionRecord[]>
+        delete: (id: string) => Promise<void>
+        clear: () => Promise<void>
+      }
+      mock: {
+        generateQuestion: (config: MockConfig) => Promise<{ success: boolean }>
+        evaluate: (data: { question: string; answer: string; config: MockConfig }) => Promise<{ success: boolean }>
+        cancel: () => Promise<{ success: boolean }>
+        onQuestionChunk: (callback: (data: StreamChunk) => void) => () => void
+        onQuestionReady: (callback: (data: { question: string }) => void) => () => void
+        onEvalChunk: (callback: (data: StreamChunk) => void) => () => void
+        onEvalComplete: (callback: (data: MockEvaluation) => void) => () => void
         onError: (callback: (error: string) => void) => () => void
       }
       transcript?: {

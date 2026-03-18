@@ -303,6 +303,196 @@ export class CodingService extends EventEmitter {
     return null
   }
 
+  async generateCodeFromImage(
+    request: CodingRequest,
+    imageBase64: string,
+    imageMimeType: string
+  ): Promise<void> {
+    this.cancelCurrent()
+    this.currentAbortController = new AbortController()
+
+    const languageLabel = LANGUAGE_LABELS[request.language]
+
+    try {
+      this.emit('status', 'generating')
+
+      if (this.currentProvider === 'ollama') {
+        await this.streamOllamaWithImage(imageBase64, languageLabel, request.language)
+      } else {
+        await this.streamClaudeWithImage(imageBase64, imageMimeType, languageLabel, request.language)
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return
+      this.emit('error', error)
+      this.emit('status', 'error')
+    } finally {
+      this.currentAbortController = null
+    }
+  }
+
+  private async streamOllamaWithImage(
+    imageBase64: string,
+    languageLabel: string,
+    language: SupportedLanguage
+  ): Promise<void> {
+    const baseUrl = ollamaService.getBaseUrl()
+
+    const response = await fetch(`${baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llava',
+        messages: [
+          { role: 'system', content: CODING_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: `Look at this coding question image and solve it in ${languageLabel}. Provide an optimal solution.`,
+            images: [imageBase64]
+          }
+        ],
+        stream: true,
+        options: { temperature: 0.4, num_predict: 2048 }
+      }),
+      signal: this.currentAbortController!.signal
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Ollama error ${response.status}: ${errorText}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response body')
+
+    const decoder = new TextDecoder()
+    let fullText = ''
+
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+    const resetTimeout = () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      timeoutTimer = setTimeout(() => { this.currentAbortController?.abort() }, 30000)
+    }
+
+    try {
+      resetTimeout()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        resetTimeout()
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n').filter((l) => l.trim())
+
+        for (const line of lines) {
+          try {
+            const parsed = JSON.parse(line) as { message?: { content: string }; done: boolean }
+            if (parsed.message?.content) {
+              fullText += parsed.message.content
+              this.emit('stream-chunk', { text: parsed.message.content, done: false })
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      reader.releaseLock()
+    }
+
+    const result = this.parseResult(fullText, language)
+    this.emit('coding-complete', result)
+    this.emit('stream-chunk', { text: '', done: true })
+    this.emit('status', 'idle')
+  }
+
+  private async streamClaudeWithImage(
+    imageBase64: string,
+    imageMimeType: string,
+    languageLabel: string,
+    language: SupportedLanguage
+  ): Promise<void> {
+    if (!claudeService.isConfigured()) throw new Error('Claude API key not set')
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': claudeService.getApiKey() || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        system: CODING_SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: imageMimeType,
+                data: imageBase64
+              }
+            },
+            {
+              type: 'text',
+              text: `Look at this coding question and solve it in ${languageLabel}. Provide an optimal solution.`
+            }
+          ]
+        }],
+        stream: true
+      }),
+      signal: this.currentAbortController!.signal
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Claude error ${response.status}: ${errorText}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error('No response body')
+
+    const decoder = new TextDecoder()
+    let fullText = ''
+
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+    const resetTimeout = () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      timeoutTimer = setTimeout(() => { this.currentAbortController?.abort() }, 30000)
+    }
+
+    try {
+      resetTimeout()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        resetTimeout()
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n').filter((l) => l.startsWith('data: '))
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line.slice(6)) as { type: string; delta?: { text?: string } }
+            if (data.type === 'content_block_delta' && data.delta?.text) {
+              fullText += data.delta.text
+              this.emit('stream-chunk', { text: data.delta.text, done: false })
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      reader.releaseLock()
+    }
+
+    const result = this.parseResult(fullText, language)
+    this.emit('coding-complete', result)
+    this.emit('stream-chunk', { text: '', done: true })
+    this.emit('status', 'idle')
+  }
+
   cancelCurrent(): void {
     if (this.currentAbortController) {
       this.currentAbortController.abort()

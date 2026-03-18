@@ -6,6 +6,9 @@ import { registerAiIpc } from './aiIpc'
 import { storageService } from '../services/storageService'
 import { sessionManager } from '../services/sessionManager'
 import { codingService, type CodingRequest } from '../services/codingService'
+import { historyService } from '../services/historyService'
+import { mockService, type MockConfig } from '../services/mockService'
+import { screenshotService } from '../services/screenshotService'
 
 export function registerIpcHandlers(): void {
   // Overlay controls
@@ -107,6 +110,132 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('coding:cancel', () => {
     codingService.cancelCurrent()
     return { success: true }
+  })
+
+  // History
+  ipcMain.handle('history:get', () => historyService.getHistory())
+  ipcMain.handle('history:delete', (_e, id: string) => {
+    historyService.deleteSession(id)
+    return { success: true }
+  })
+  ipcMain.handle('history:clear', () => {
+    historyService.clearHistory()
+    return { success: true }
+  })
+
+  // Mock interview
+  ipcMain.handle('mock:generate-question', async (_event, config: MockConfig) => {
+    const settings = storageService.get('settings') as Record<string, unknown> | undefined
+    const provider = (settings?.aiProvider as string) || 'ollama'
+    mockService.setProvider(provider as 'ollama' | 'claude')
+
+    const onChunk = (data: { text: string; done: boolean }): void => {
+      windowManager.sendToAll('mock:question-chunk', data)
+    }
+    const onReady = (data: { question: string }): void => {
+      windowManager.sendToAll('mock:question-ready', data)
+    }
+    const onError = (error: string): void => {
+      windowManager.sendToAll('mock:error', error)
+    }
+
+    mockService.on('mock:question-chunk', onChunk)
+    mockService.on('mock:question-ready', onReady)
+    mockService.on('mock:error', onError)
+
+    try {
+      await mockService.generateQuestion(config)
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('mock:error', message)
+      return { success: false, error: message }
+    } finally {
+      mockService.removeListener('mock:question-chunk', onChunk)
+      mockService.removeListener('mock:question-ready', onReady)
+      mockService.removeListener('mock:error', onError)
+    }
+  })
+
+  ipcMain.handle('mock:evaluate', async (_event, data: { question: string; answer: string; config: MockConfig }) => {
+    const settings = storageService.get('settings') as Record<string, unknown> | undefined
+    const provider = (settings?.aiProvider as string) || 'ollama'
+    mockService.setProvider(provider as 'ollama' | 'claude')
+
+    const onChunk = (chunkData: { text: string; done: boolean }): void => {
+      windowManager.sendToAll('mock:eval-chunk', chunkData)
+    }
+    const onComplete = (evaluation: unknown): void => {
+      windowManager.sendToAll('mock:eval-complete', evaluation)
+    }
+    const onError = (error: string): void => {
+      windowManager.sendToAll('mock:error', error)
+    }
+
+    mockService.on('mock:eval-chunk', onChunk)
+    mockService.on('mock:eval-complete', onComplete)
+    mockService.on('mock:error', onError)
+
+    try {
+      await mockService.evaluateAnswer(data.question, data.answer, data.config)
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('mock:error', message)
+      return { success: false, error: message }
+    } finally {
+      mockService.removeListener('mock:eval-chunk', onChunk)
+      mockService.removeListener('mock:eval-complete', onComplete)
+      mockService.removeListener('mock:error', onError)
+    }
+  })
+
+  ipcMain.handle('mock:cancel', () => {
+    mockService.cancelCurrent()
+    return { success: true }
+  })
+
+  // Screenshot / image
+  ipcMain.handle('coding:pick-image', async () => {
+    return screenshotService.pickImageFile()
+  })
+
+  ipcMain.handle('coding:capture-screen', async () => {
+    return screenshotService.captureScreen()
+  })
+
+  ipcMain.handle('coding:generate-from-image', async (_event, request: CodingRequest & { image: { base64: string; mimeType: string } }) => {
+    const settings = storageService.get('settings') as Record<string, unknown> | undefined
+    const provider = (settings?.aiProvider as string) || 'ollama'
+    codingService.setProvider(provider as 'ollama' | 'claude')
+
+    const onChunk = (data: { text: string; done: boolean }): void => {
+      windowManager.sendToAll('coding:stream-chunk', data)
+    }
+    const onComplete = (result: unknown): void => {
+      windowManager.sendToAll('coding:complete', result)
+    }
+    const onError = (error: unknown): void => {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('coding:error', message)
+    }
+
+    codingService.on('stream-chunk', onChunk)
+    codingService.on('coding-complete', onComplete)
+    codingService.on('error', onError)
+
+    try {
+      await codingService.generateCodeFromImage(request, request.image.base64, request.image.mimeType)
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('coding:error', message)
+      return { success: false, error: message }
+    } finally {
+      codingService.removeListener('stream-chunk', onChunk)
+      codingService.removeListener('coding-complete', onComplete)
+      codingService.removeListener('error', onError)
+    }
   })
 
   // Register module-specific IPC handlers

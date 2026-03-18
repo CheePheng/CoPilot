@@ -99,8 +99,46 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
       ipcRenderer.on('coding:error', handler)
       return () => ipcRenderer.removeListener('coding:error', handler)
+    },
+    pickImage: () => ipcRenderer.invoke('coding:pick-image'),
+    captureScreen: () => ipcRenderer.invoke('coding:capture-screen'),
+    generateFromImage: (request: unknown) => ipcRenderer.invoke('coding:generate-from-image', request),
+  },
+  history: {
+    get: () => ipcRenderer.invoke('history:get'),
+    delete: (id: string) => ipcRenderer.invoke('history:delete', id),
+    clear: () => ipcRenderer.invoke('history:clear')
+  },
+  mock: {
+    generateQuestion: (config: unknown) => ipcRenderer.invoke('mock:generate-question', config),
+    evaluate: (data: unknown) => ipcRenderer.invoke('mock:evaluate', data),
+    cancel: () => ipcRenderer.invoke('mock:cancel'),
+    onQuestionChunk: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('mock:question-chunk', handler)
+      return () => ipcRenderer.removeListener('mock:question-chunk', handler)
+    },
+    onQuestionReady: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('mock:question-ready', handler)
+      return () => ipcRenderer.removeListener('mock:question-ready', handler)
+    },
+    onEvalChunk: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('mock:eval-chunk', handler)
+      return () => ipcRenderer.removeListener('mock:eval-chunk', handler)
+    },
+    onEvalComplete: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('mock:eval-complete', handler)
+      return () => ipcRenderer.removeListener('mock:eval-complete', handler)
+    },
+    onError: (callback: (error: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
+      ipcRenderer.on('mock:error', handler)
+      return () => ipcRenderer.removeListener('mock:error', handler)
     }
-  }
+  },
 }
 
 contextBridge.exposeInMainWorld('copilot', api)

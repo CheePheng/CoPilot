@@ -14,9 +14,10 @@ const pageLabels: Record<Page, string> = {
 
 interface HeaderProps {
   currentPage: Page
+  onNavigate?: (page: Page) => void
 }
 
-export default function Header({ currentPage }: HeaderProps) {
+export default function Header({ currentPage, onNavigate }: HeaderProps) {
   const status = useSessionStore((s) => s.status)
   const aiProvider = useSettingsStore((s) => s.aiProvider)
   const sttProvider = useSettingsStore((s) => s.sttProvider)
@@ -44,24 +45,44 @@ export default function Header({ currentPage }: HeaderProps) {
       <div className="flex items-center gap-4">
         {/* Provider badges */}
         <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider"
+          <button
+            onClick={() => onNavigate?.('settings')}
+            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
             style={{
               backgroundColor: 'var(--accent-subtle)',
-              color: 'var(--accent)'
+              color: 'var(--accent)',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--accent)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-glow)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'transparent'
+              e.currentTarget.style.boxShadow = 'none'
             }}
           >
             {aiProvider}
-          </span>
-          <span
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider"
+          </button>
+          <button
+            onClick={() => onNavigate?.('settings')}
+            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
             style={{
               backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-muted)'
+              color: 'var(--text-muted)',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-hover)'
+              e.currentTarget.style.color = 'var(--text-secondary)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'transparent'
+              e.currentTarget.style.color = 'var(--text-muted)'
             }}
           >
             {sttProvider === 'web-speech' ? 'Web STT' : 'Deepgram'}
-          </span>
+          </button>
         </div>
       </div>
     </header>

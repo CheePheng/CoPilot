@@ -9,7 +9,8 @@ import SessionControls from './components/session/SessionControls'
 import ToastContainer from './components/ui/ToastContainer'
 import OnboardingModal from './components/onboarding/OnboardingModal'
 import { ErrorBoundary } from './components/ui'
-import { HistoryIcon, LightbulbIcon } from './components/ui/Icons'
+import { HistoryIcon, LightbulbIcon, ClipboardIcon } from './components/ui/Icons'
+import { useClipboardMonitor } from './hooks/useClipboardMonitor'
 import { SkeletonBlock } from './components/ui/Skeleton'
 import { useAudioCapture } from './hooks/useAudioCapture'
 import { useWebSpeech } from './hooks/useWebSpeech'
@@ -54,7 +55,7 @@ export default function App() {
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
 
       <div className="flex flex-col flex-1 min-w-0">
-        <Header currentPage={currentPage} />
+        <Header currentPage={currentPage} onNavigate={setCurrentPage} />
 
         <main
           className="flex-1 overflow-auto p-6"
@@ -91,6 +92,8 @@ function InterviewPage() {
 
   const webSpeechEnabled = sttProvider === 'web-speech' && (status === 'listening' || status === 'processing' || status === 'answering')
   useWebSpeech(webSpeechEnabled)
+
+  const { detectedText: clipboardQuestion, dismiss: dismissClipboard } = useClipboardMonitor(status === 'listening')
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -172,6 +175,34 @@ function InterviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Clipboard auto-detect */}
+      {clipboardQuestion && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl animate-slideUp"
+          style={{
+            backgroundColor: 'var(--accent-subtle)',
+            border: '1px solid rgba(124, 92, 252, 0.15)'
+          }}
+        >
+          <ClipboardIcon size={14} style={{ color: 'var(--accent)' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--accent)' }}>
+              Question detected in clipboard
+            </p>
+            <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
+              {clipboardQuestion}
+            </p>
+          </div>
+          <button
+            onClick={dismissClipboard}
+            className="text-[10px] font-medium px-2 py-1 rounded-lg cursor-pointer"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   )
 }

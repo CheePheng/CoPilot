@@ -4,6 +4,7 @@ import { questionDetector, type DetectedQuestion } from './questionDetector'
 import type { UserProfile } from './promptBuilder'
 import type { AIProvider, STTProvider, TranscriptResult } from './types'
 import { windowManager } from '../windows/windowManager'
+import { historyService } from './historyService'
 
 export type SessionState = 'idle' | 'active' | 'paused'
 
@@ -13,6 +14,7 @@ export class SessionManager extends EventEmitter {
   private transcriptHistory: TranscriptResult[] = []
   private aiProvider: AIProvider | null = null
   private sttProvider: STTProvider | null = null
+  private currentQuestion: DetectedQuestion | null = null
 
   setProfile(profile: UserProfile | null): void {
     this.profile = profile
@@ -32,6 +34,7 @@ export class SessionManager extends EventEmitter {
     if (!this.sttProvider) throw new Error('No STT provider configured')
 
     this.state = 'active'
+    historyService.beginSession('interview')
     this.transcriptHistory = []
     questionDetector.reset()
 
@@ -50,6 +53,8 @@ export class SessionManager extends EventEmitter {
     this.aiProvider?.cancelCurrent()
     questionDetector.reset()
 
+    historyService.endSession()
+    this.currentQuestion = null
     this.removeAllPipelineListeners()
     this.broadcastStatus('idle')
   }
@@ -109,6 +114,11 @@ export class SessionManager extends EventEmitter {
       windowManager.sendToAll('transcript:update', entry)
 
       if (result.isFinal) {
+        historyService.recordTranscript(
+          result.speaker === 0 ? 'interviewer' : 'user',
+          result.text,
+          result.timestamp
+        )
         windowManager.sendToAll('transcript:final', entry)
       }
     })
@@ -129,6 +139,7 @@ export class SessionManager extends EventEmitter {
         isQuestion: true
       }
       windowManager.sendToAll('transcript:update', entry)
+      this.currentQuestion = question
       this.broadcastStatus('processing')
 
       const recentContext = questionDetector.getRecentContext()
@@ -142,6 +153,15 @@ export class SessionManager extends EventEmitter {
 
     ai.on('answer-complete', (answer: unknown) => {
       windowManager.sendToAll('ai:answer-complete', answer)
+      if (this.currentQuestion) {
+        const answerData = answer as { suggestedAnswer?: string; answerType?: string }
+        historyService.recordQuestion(
+          this.currentQuestion.text,
+          answerData?.suggestedAnswer || '',
+          answerData?.answerType || this.currentQuestion.type
+        )
+        this.currentQuestion = null
+      }
       this.broadcastStatus('listening')
     })
 
