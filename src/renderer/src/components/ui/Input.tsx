@@ -4,7 +4,8 @@ const baseStyle: React.CSSProperties = {
   backgroundColor: 'var(--bg-tertiary)',
   border: '1px solid var(--border)',
   color: 'var(--text-primary)',
-  transition: 'all 0.2s ease'
+  transition: 'all 0.2s ease',
+  boxShadow: 'var(--shadow-xs), inset 0 1px 2px rgba(0, 0, 0, 0.1)'
 }
 
 interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -17,7 +18,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
   ({ label, error, hint, className = '', style, ...props }, ref) => (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-[11px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
           {label}
         </label>
       )}
@@ -44,7 +45,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ label, error, hint, className = '', style, ...props }, ref) => (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-[11px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
           {label}
         </label>
       )}
@@ -72,7 +73,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
   ({ label, error, hint, options, className = '', style, ...props }, ref) => (
     <div className="space-y-1.5">
       {label && (
-        <label className="block text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+        <label className="block text-[11px] font-semibold tracking-wide" style={{ color: 'var(--text-secondary)', letterSpacing: '0.02em' }}>
           {label}
         </label>
       )}

@@ -44,11 +44,12 @@ interface ProfileState {
 
 const PROFILE_KEY = 'profile'
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null
+const saveState = { timer: null as ReturnType<typeof setTimeout> | null }
 
 function debouncedSave(profile: Profile): void {
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
+  if (saveState.timer) clearTimeout(saveState.timer)
+  saveState.timer = setTimeout(() => {
+    saveState.timer = null
     window.copilot?.storage?.set(PROFILE_KEY, profile)
     window.copilot?.profile?.sync(profile)
   }, 500)

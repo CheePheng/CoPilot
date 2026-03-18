@@ -17,7 +17,8 @@ interface SessionState {
   tickTimer: () => void
 }
 
-let timerInterval: ReturnType<typeof setInterval> | null = null
+// Store timer ID alongside the store — not in state (would cause re-renders)
+const timerState = { interval: null as ReturnType<typeof setInterval> | null }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   status: 'idle',
@@ -51,18 +52,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   clearCurrentAnswer: () => set({ currentAnswer: '', currentAnswerCard: null }),
 
   startTimer: () => {
-    if (timerInterval) clearInterval(timerInterval)
+    if (timerState.interval) clearInterval(timerState.interval)
     const startTime = Date.now()
     set({ sessionStartTime: startTime, elapsedTime: 0 })
-    timerInterval = setInterval(() => {
+    timerState.interval = setInterval(() => {
       set({ elapsedTime: Math.floor((Date.now() - startTime) / 1000) })
     }, 1000)
   },
 
   stopTimer: () => {
-    if (timerInterval) {
-      clearInterval(timerInterval)
-      timerInterval = null
+    if (timerState.interval) {
+      clearInterval(timerState.interval)
+      timerState.interval = null
     }
     set({ sessionStartTime: null, elapsedTime: 0 })
   },

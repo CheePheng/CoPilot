@@ -109,6 +109,10 @@ export class ClaudeService extends EventEmitter implements AIProvider {
     }
   }
 
+  getApiKey(): string | null {
+    return this.client ? (this.client.apiKey as string) : null
+  }
+
   isConfigured(): boolean {
     return this.client !== null
   }

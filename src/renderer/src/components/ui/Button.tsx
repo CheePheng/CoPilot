@@ -12,9 +12,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-lg',
-  md: 'px-4 py-2 text-sm gap-2 rounded-xl',
-  lg: 'px-6 py-2.5 text-sm gap-2 rounded-xl'
+  sm: 'px-3.5 py-1.5 text-xs gap-1.5 rounded-[10px]',
+  md: 'px-5 py-2.5 text-[13px] gap-2 rounded-xl',
+  lg: 'px-7 py-3 text-sm gap-2.5 rounded-xl'
 }
 
 const variantStyles: Record<ButtonVariant, {
@@ -25,23 +25,28 @@ const variantStyles: Record<ButtonVariant, {
     base: {
       background: 'var(--accent-gradient)',
       color: 'white',
-      border: '1px solid transparent',
-      boxShadow: 'var(--shadow-glow)'
+      border: '1px solid rgba(139, 92, 246, 0.3)',
+      boxShadow: '0 0 20px rgba(124, 92, 252, 0.15), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+      letterSpacing: '0.01em'
     },
     hover: {
-      transform: 'scale(1.02)',
-      boxShadow: '0 0 32px rgba(124, 92, 252, 0.3)'
+      transform: 'translateY(-1px)',
+      boxShadow: '0 0 30px rgba(124, 92, 252, 0.25), 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
     }
   },
   secondary: {
     base: {
       backgroundColor: 'var(--bg-tertiary)',
       color: 'var(--text-secondary)',
-      border: '1px solid var(--border)'
+      border: '1px solid var(--border)',
+      boxShadow: 'var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.03)'
     },
     hover: {
       backgroundColor: 'var(--bg-elevated)',
-      color: 'var(--text-primary)'
+      color: 'var(--text-primary)',
+      borderColor: 'var(--border-hover)',
+      transform: 'translateY(-1px)',
+      boxShadow: 'var(--shadow-sm), 0 0 16px rgba(124, 92, 252, 0.06)'
     }
   },
   ghost: {
@@ -51,41 +56,51 @@ const variantStyles: Record<ButtonVariant, {
       border: '1px solid transparent'
     },
     hover: {
-      backgroundColor: 'var(--bg-tertiary)',
-      color: 'var(--text-primary)'
+      backgroundColor: 'rgba(124, 92, 252, 0.06)',
+      color: 'var(--text-primary)',
+      borderColor: 'rgba(124, 92, 252, 0.1)'
     }
   },
   danger: {
     base: {
       backgroundColor: 'var(--danger-subtle)',
       color: 'var(--danger)',
-      border: '1px solid rgba(239, 68, 68, 0.2)'
+      border: '1px solid rgba(239, 68, 68, 0.15)',
+      boxShadow: 'var(--shadow-xs)'
     },
     hover: {
-      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-      borderColor: 'rgba(239, 68, 68, 0.3)'
+      backgroundColor: 'rgba(239, 68, 68, 0.18)',
+      borderColor: 'rgba(239, 68, 68, 0.25)',
+      transform: 'translateY(-1px)',
+      boxShadow: 'var(--shadow-sm), 0 0 16px rgba(239, 68, 68, 0.08)'
     }
   },
   success: {
     base: {
       backgroundColor: 'var(--success-subtle)',
       color: 'var(--success)',
-      border: '1px solid rgba(16, 185, 129, 0.2)'
+      border: '1px solid rgba(16, 185, 129, 0.15)',
+      boxShadow: 'var(--shadow-xs)'
     },
     hover: {
-      backgroundColor: 'rgba(16, 185, 129, 0.2)',
-      borderColor: 'rgba(16, 185, 129, 0.3)'
+      backgroundColor: 'rgba(16, 185, 129, 0.18)',
+      borderColor: 'rgba(16, 185, 129, 0.25)',
+      transform: 'translateY(-1px)',
+      boxShadow: 'var(--shadow-sm), 0 0 16px rgba(16, 185, 129, 0.08)'
     }
   },
   warning: {
     base: {
       backgroundColor: 'var(--warning-subtle)',
       color: 'var(--warning)',
-      border: '1px solid rgba(245, 158, 11, 0.2)'
+      border: '1px solid rgba(245, 158, 11, 0.15)',
+      boxShadow: 'var(--shadow-xs)'
     },
     hover: {
-      backgroundColor: 'rgba(245, 158, 11, 0.2)',
-      borderColor: 'rgba(245, 158, 11, 0.3)'
+      backgroundColor: 'rgba(245, 158, 11, 0.18)',
+      borderColor: 'rgba(245, 158, 11, 0.25)',
+      transform: 'translateY(-1px)',
+      boxShadow: 'var(--shadow-sm), 0 0 16px rgba(245, 158, 11, 0.08)'
     }
   }
 }
@@ -106,7 +121,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={isDisabled}
-        className={`inline-flex items-center justify-center font-semibold cursor-pointer transition-all ${sizeClasses[size]} ${className}`}
+        className={`inline-flex items-center justify-center font-semibold cursor-pointer transition-all duration-200 ${sizeClasses[size]} ${className}`}
         style={{
           ...styles.base,
           opacity: isDisabled ? 0.5 : 1,

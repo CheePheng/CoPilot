@@ -70,8 +70,16 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
     >
       {/* Logo */}
       <div className="px-3 mb-8">
-        <h1 className="text-xl font-bold gradient-text">CoPilot</h1>
-        <p className="text-[11px] mt-1 font-medium tracking-wide" style={{ color: 'var(--text-muted)' }}>
+        <h1
+          className="text-xl font-bold gradient-text"
+          style={{ filter: 'drop-shadow(0 0 8px rgba(124, 92, 252, 0.3))' }}
+        >
+          CoPilot
+        </h1>
+        <p
+          className="text-[10px] mt-1.5 font-bold tracking-[0.12em]"
+          style={{ color: 'var(--text-muted)' }}
+        >
           AI INTERVIEW ASSISTANT
         </p>
       </div>
@@ -81,8 +89,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {navSections.map((section) => (
           <div key={section.label}>
             <p
-              className="text-[9px] font-semibold uppercase tracking-widest px-3 mb-1"
-              style={{ color: 'var(--text-muted)', opacity: 0.6 }}
+              className="text-[10px] font-bold uppercase tracking-[0.1em] px-3 mb-2"
+              style={{ color: 'var(--text-muted)', opacity: 0.7 }}
             >
               {section.label}
             </p>
@@ -99,18 +107,23 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                       color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)',
                       transition: 'all 0.2s ease',
                       borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
-                      ...(isActive ? { boxShadow: '0 0 20px rgba(124, 92, 252, 0.08)' } : {})
+                      ...(isActive ? {
+                        boxShadow: '0 0 24px rgba(124, 92, 252, 0.1), inset 0 0 12px rgba(124, 92, 252, 0.04)',
+                        borderColor: 'var(--accent)'
+                      } : {})
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-                        e.currentTarget.style.transform = 'translateX(2px)'
+                        e.currentTarget.style.backgroundColor = 'rgba(124, 92, 252, 0.05)'
+                        e.currentTarget.style.transform = 'translateX(3px)'
+                        e.currentTarget.style.color = 'var(--text-primary)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isActive) {
                         e.currentTarget.style.backgroundColor = 'transparent'
                         e.currentTarget.style.transform = 'translateX(0)'
+                        e.currentTarget.style.color = 'var(--text-secondary)'
                       }
                     }}
                   >

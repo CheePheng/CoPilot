@@ -125,10 +125,20 @@ export class CodingService extends EventEmitter {
     const decoder = new TextDecoder()
     let fullText = ''
 
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+    const resetTimeout = () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      timeoutTimer = setTimeout(() => {
+        this.currentAbortController?.abort()
+      }, 30000)
+    }
+
     try {
+      resetTimeout()
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        resetTimeout()
 
         const chunk = decoder.decode(value, { stream: true })
         const lines = chunk.split('\n').filter((l) => l.trim())
@@ -146,6 +156,7 @@ export class CodingService extends EventEmitter {
         }
       }
     } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
       reader.releaseLock()
     }
 
@@ -160,18 +171,11 @@ export class CodingService extends EventEmitter {
       throw new Error('Claude API key not set')
     }
 
-    // Use Claude via its stream method indirectly - invoke the same pattern
-    // We use the Anthropic SDK directly through the claude service's client
-    const Anthropic = (await import('@anthropic-ai/sdk')).default
-
-    // We need the API key - get it from environment or stored config
-    // The claudeService already has the client configured, so we'll
-    // create a lightweight stream using the same approach
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': (claudeService as unknown as { client: { apiKey: string } }).client?.apiKey || '',
+        'x-api-key': claudeService.getApiKey() || '',
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -195,10 +199,20 @@ export class CodingService extends EventEmitter {
     const decoder = new TextDecoder()
     let fullText = ''
 
+    let timeoutTimer: ReturnType<typeof setTimeout> | null = null
+    const resetTimeout = () => {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
+      timeoutTimer = setTimeout(() => {
+        this.currentAbortController?.abort()
+      }, 30000)
+    }
+
     try {
+      resetTimeout()
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+        resetTimeout()
 
         const chunk = decoder.decode(value, { stream: true })
         const lines = chunk.split('\n').filter((l) => l.startsWith('data: '))
@@ -219,6 +233,7 @@ export class CodingService extends EventEmitter {
         }
       }
     } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer)
       reader.releaseLock()
     }
 

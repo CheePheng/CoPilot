@@ -69,42 +69,38 @@ export function registerIpcHandlers(): void {
 
   // Coding mode
   ipcMain.handle('coding:generate', async (_event, request: CodingRequest) => {
+    // Sync provider setting
+    const settings = storageService.get('settings') as Record<string, unknown> | undefined
+    const provider = (settings?.aiProvider as string) || 'ollama'
+    codingService.setProvider(provider as 'ollama' | 'claude')
+
+    // Wire up events for this request
+    const onChunk = (data: { text: string; done: boolean }) => {
+      windowManager.sendToAll('coding:stream-chunk', data)
+    }
+    const onComplete = (result: unknown) => {
+      windowManager.sendToAll('coding:complete', result)
+    }
+    const onError = (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('coding:error', message)
+    }
+
+    codingService.on('stream-chunk', onChunk)
+    codingService.on('coding-complete', onComplete)
+    codingService.on('error', onError)
+
     try {
-      // Sync provider setting
-      const settings = storageService.get('settings') as Record<string, unknown> | undefined
-      const provider = (settings?.aiProvider as string) || 'ollama'
-      codingService.setProvider(provider as 'ollama' | 'claude')
-
-      // Wire up events for this request
-      const onChunk = (data: { text: string; done: boolean }) => {
-        windowManager.sendToAll('coding:stream-chunk', data)
-      }
-      const onComplete = (result: unknown) => {
-        windowManager.sendToAll('coding:complete', result)
-        cleanup()
-      }
-      const onError = (error: unknown) => {
-        const message = error instanceof Error ? error.message : String(error)
-        windowManager.sendToAll('coding:error', message)
-        cleanup()
-      }
-
-      const cleanup = () => {
-        codingService.removeListener('stream-chunk', onChunk)
-        codingService.removeListener('coding-complete', onComplete)
-        codingService.removeListener('error', onError)
-      }
-
-      codingService.on('stream-chunk', onChunk)
-      codingService.on('coding-complete', onComplete)
-      codingService.on('error', onError)
-
       await codingService.generateCode(request)
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       windowManager.sendToAll('coding:error', message)
       return { success: false, error: message }
+    } finally {
+      codingService.removeListener('stream-chunk', onChunk)
+      codingService.removeListener('coding-complete', onComplete)
+      codingService.removeListener('error', onError)
     }
   })
 

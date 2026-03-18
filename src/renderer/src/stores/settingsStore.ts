@@ -28,11 +28,12 @@ interface SettingsState {
 
 const SETTINGS_KEY = 'settings'
 
-let saveTimer: ReturnType<typeof setTimeout> | null = null
+const saveState = { timer: null as ReturnType<typeof setTimeout> | null }
 
 function debouncedSave(state: SettingsState): void {
-  if (saveTimer) clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => {
+  if (saveState.timer) clearTimeout(saveState.timer)
+  saveState.timer = setTimeout(() => {
+    saveState.timer = null
     const data = {
       aiProvider: state.aiProvider,
       sttProvider: state.sttProvider,

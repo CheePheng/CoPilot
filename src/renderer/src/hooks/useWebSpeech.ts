@@ -112,16 +112,18 @@ export function useWebSpeech(enabled: boolean, language: string = 'en-US') {
     }
 
     recognition.onend = () => {
-      // Auto-restart if still enabled (Web Speech API stops after silence)
-      if (enabledRef.current && isListeningRef.current) {
-        try {
-          recognition.start()
-        } catch {
-          setIsListening(false)
-          window.copilot?.stt?.sendWebSpeechStatus?.('stopped')
-        }
+      setIsListening(false)
+      // Auto-restart with a fresh instance if still enabled
+      if (enabledRef.current) {
+        // Small delay to avoid rapid restart loops
+        setTimeout(() => {
+          if (enabledRef.current) {
+            start()
+          } else {
+            window.copilot?.stt?.sendWebSpeechStatus?.('stopped')
+          }
+        }, 100)
       } else {
-        setIsListening(false)
         window.copilot?.stt?.sendWebSpeechStatus?.('stopped')
       }
     }

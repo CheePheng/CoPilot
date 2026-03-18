@@ -31,7 +31,10 @@ export default function Card({
   return (
     <div
       className={`glass-panel ${paddingClasses[padding]} ${className}`}
-      style={style}
+      style={{
+        transition: 'all 0.2s ease',
+        ...style
+      }}
     >
       {header && (
         <div
@@ -77,7 +80,10 @@ export default function Card({
 
 export function SectionHeader({ children }: { children: ReactNode }) {
   return (
-    <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+    <h3
+      className="text-[11px] font-bold uppercase tracking-widest"
+      style={{ color: 'var(--text-muted)', letterSpacing: '0.08em' }}
+    >
       {children}
     </h3>
   )
