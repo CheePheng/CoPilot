@@ -76,6 +76,7 @@ export function registerIpcHandlers(): void {
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
     codingService.setProvider(provider as 'ollama' | 'claude')
+    if (settings?.claudeModel) codingService.setClaudeModel(settings.claudeModel as string)
 
     // Wire up events for this request
     const onChunk = (data: { text: string; done: boolean }) => {
@@ -128,6 +129,7 @@ export function registerIpcHandlers(): void {
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
     mockService.setProvider(provider as 'ollama' | 'claude')
+    if (settings?.claudeModel) mockService.setClaudeModel(settings.claudeModel as string)
 
     const onChunk = (data: { text: string; done: boolean }): void => {
       windowManager.sendToAll('mock:question-chunk', data)
@@ -161,6 +163,7 @@ export function registerIpcHandlers(): void {
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
     mockService.setProvider(provider as 'ollama' | 'claude')
+    if (settings?.claudeModel) mockService.setClaudeModel(settings.claudeModel as string)
 
     const onChunk = (chunkData: { text: string; done: boolean }): void => {
       windowManager.sendToAll('mock:eval-chunk', chunkData)
@@ -208,6 +211,7 @@ export function registerIpcHandlers(): void {
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
     codingService.setProvider(provider as 'ollama' | 'claude')
+    if (settings?.claudeModel) codingService.setClaudeModel(settings.claudeModel as string)
 
     const onChunk = (data: { text: string; done: boolean }): void => {
       windowManager.sendToAll('coding:stream-chunk', data)

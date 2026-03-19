@@ -101,30 +101,16 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
                   <button
                     key={item.id}
                     onClick={() => onNavigate(item.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
+                    data-active={isActive ? 'true' : undefined}
+                    className="sidebar-nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
                     style={{
                       backgroundColor: isActive ? 'var(--accent-subtle)' : 'transparent',
                       color: isActive ? 'var(--accent-hover)' : 'var(--text-secondary)',
-                      transition: 'all 0.2s ease',
                       borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
                       ...(isActive ? {
                         boxShadow: '0 0 24px rgba(124, 92, 252, 0.1), inset 0 0 12px rgba(124, 92, 252, 0.04)',
                         borderColor: 'var(--accent)'
                       } : {})
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'rgba(124, 92, 252, 0.05)'
-                        e.currentTarget.style.transform = 'translateX(3px)'
-                        e.currentTarget.style.color = 'var(--text-primary)'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent'
-                        e.currentTarget.style.transform = 'translateX(0)'
-                        e.currentTarget.style.color = 'var(--text-secondary)'
-                      }
                     }}
                   >
                     <item.Icon size={18} />
@@ -156,14 +142,8 @@ export default function Sidebar({ currentPage, onNavigate }: SidebarProps) {
         {/* Overlay toggle */}
         <button
           onClick={() => window.copilot?.overlay?.toggle()}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
+          className="overlay-btn w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all"
           style={{ color: 'var(--text-secondary)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
         >
           <OverlayIcon size={16} />
           <span>Toggle Overlay</span>

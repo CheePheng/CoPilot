@@ -5,6 +5,7 @@ import { AlertIcon } from '../ui/Icons'
 import Button from '../ui/Button'
 import Badge from '../ui/Badge'
 import Card from '../ui/Card'
+import { TextArea, SelectInput } from '../ui/Input'
 import type { MockEvaluation, StreamChunk } from '../../types/ipc'
 
 type MockState = 'setup' | 'active' | 'feedback'
@@ -109,20 +110,6 @@ export default function MockInterviewPage() {
     }
   }, [mock.feedbackHistory.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const inputStyle = {
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-    transition: 'all 0.2s ease'
-  }
-
-  const pillStyle = (active: boolean) => ({
-    background: active ? 'var(--accent-gradient)' : 'var(--bg-tertiary)',
-    color: active ? 'white' : 'var(--text-muted)',
-    border: active ? '1px solid transparent' : '1px solid var(--border)',
-    boxShadow: active ? 'var(--shadow-glow)' : 'none'
-  })
-
   // Setup Screen
   if (mockState === 'setup') {
     return (
@@ -140,7 +127,11 @@ export default function MockInterviewPage() {
           <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Difficulty</h3>
           <div className="flex gap-2">
             {(['easy', 'medium', 'hard'] as Difficulty[]).map((d) => (
-              <button key={d} onClick={() => setDifficulty(d)} className="px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer capitalize transition-all" style={pillStyle(difficulty === d)}>
+              <button
+                key={d}
+                onClick={() => setDifficulty(d)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer capitalize pill-toggle${difficulty === d ? ' pill-toggle-active' : ''}`}
+              >
                 {d}
               </button>
             ))}
@@ -151,7 +142,11 @@ export default function MockInterviewPage() {
           <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Focus Areas</h3>
           <div className="flex flex-wrap gap-2">
             {(['behavioral', 'technical', 'system-design', 'situational'] as FocusArea[]).map((area) => (
-              <button key={area} onClick={() => toggleFocus(area)} className="px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer capitalize transition-all" style={pillStyle(focusAreas.includes(area))}>
+              <button
+                key={area}
+                onClick={() => toggleFocus(area)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer capitalize pill-toggle${focusAreas.includes(area) ? ' pill-toggle-active' : ''}`}
+              >
                 {area.replace('-', ' ')}
               </button>
             ))}
@@ -160,12 +155,17 @@ export default function MockInterviewPage() {
 
         <section className="glass-panel p-5 space-y-3">
           <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Questions</h3>
-          <select value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value))} className="px-3 py-2 rounded-xl text-sm" style={inputStyle}>
-            <option value={3}>3 questions (~10 min)</option>
-            <option value={5}>5 questions (~15 min)</option>
-            <option value={8}>8 questions (~25 min)</option>
-            <option value={10}>10 questions (~30 min)</option>
-          </select>
+          <SelectInput
+            value={questionCount}
+            onChange={(e) => setQuestionCount(parseInt(e.target.value))}
+            options={[
+              { value: '3', label: '3 questions (~10 min)' },
+              { value: '5', label: '5 questions (~15 min)' },
+              { value: '8', label: '8 questions (~25 min)' },
+              { value: '10', label: '10 questions (~30 min)' }
+            ]}
+            className="w-auto"
+          />
         </section>
 
         <Button variant="primary" size="lg" onClick={startMock}>
@@ -207,14 +207,13 @@ export default function MockInterviewPage() {
             <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               Your Answer
             </p>
-            <textarea
+            <TextArea
               value={answerText}
               onChange={(e) => setAnswerText(e.target.value)}
               placeholder="Type your answer here..."
               rows={6}
               disabled={mock.isEvaluating}
-              className="w-full px-3 py-2 rounded-xl text-sm resize-y"
-              style={inputStyle}
+              className="resize-y"
             />
 
             {mock.isEvaluating ? (

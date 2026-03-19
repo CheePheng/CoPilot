@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { ollamaService } from './ollamaService'
 import { claudeService } from './claudeService'
 import { buildMockQuestionPrompt, buildMockEvaluationPrompt } from './promptBuilder'
+import { extractJson } from './jsonParser'
 
 export interface MockConfig {
   targetRole: string
@@ -23,9 +24,14 @@ export interface MockEvaluation {
 export class MockService extends EventEmitter {
   private currentAbortController: AbortController | null = null
   private currentProvider: 'ollama' | 'claude' = 'ollama'
+  private claudeModel: string = 'claude-sonnet-4-20250514'
 
   setProvider(provider: 'ollama' | 'claude'): void {
     this.currentProvider = provider
+  }
+
+  setClaudeModel(model: string): void {
+    this.claudeModel = model
   }
 
   async generateQuestion(config: MockConfig): Promise<void> {
@@ -155,19 +161,18 @@ export class MockService extends EventEmitter {
   }
 
   private async streamClaude(systemPrompt: string, userPrompt: string, chunkEvent: string): Promise<string> {
-    if (!claudeService.isConfigured()) {
-      throw new Error('Claude API key not set')
-    }
+    const apiKey = claudeService.getApiKey()
+    if (!apiKey) throw new Error('Claude API key not configured')
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': claudeService.getApiKey() || '',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: this.claudeModel,
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
@@ -230,7 +235,7 @@ export class MockService extends EventEmitter {
 
   private parseEvalResult(text: string): MockEvaluation {
     try {
-      const jsonStr = this.extractJson(text)
+      const jsonStr = extractJson(text)
       if (jsonStr) {
         const parsed = JSON.parse(jsonStr) as Record<string, unknown>
         return {
@@ -252,36 +257,6 @@ export class MockService extends EventEmitter {
       strengths: ['Answer provided'], improvements: ['Could not parse AI evaluation'],
       goldAnswer: ''
     }
-  }
-
-  private extractJson(text: string): string | null {
-    try {
-      JSON.parse(text.trim())
-      return text.trim()
-    } catch {
-      // Not pure JSON
-    }
-
-    const start = text.indexOf('{')
-    if (start === -1) return null
-
-    let depth = 0
-    let inString = false
-    let escape = false
-
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i]
-      if (escape) { escape = false; continue }
-      if (ch === '\\' && inString) { escape = true; continue }
-      if (ch === '"') { inString = !inString; continue }
-      if (inString) continue
-      if (ch === '{') depth++
-      else if (ch === '}') {
-        depth--
-        if (depth === 0) return text.slice(start, i + 1)
-      }
-    }
-    return null
   }
 
   cancelCurrent(): void {

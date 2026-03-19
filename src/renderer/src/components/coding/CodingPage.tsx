@@ -4,6 +4,7 @@ import { useToastStore } from '../../stores/toastStore'
 import Button from '../ui/Button'
 import Card, { SectionHeader } from '../ui/Card'
 import Badge from '../ui/Badge'
+import { TextArea } from '../ui/Input'
 import { SkeletonCode } from '../ui/Skeleton'
 import { CodeIcon, SparklesIcon, ClipboardIcon, TerminalIcon, StopIcon, FileUpIcon, MonitorIcon, ImageIcon } from '../ui/Icons'
 import LanguageSelector from './LanguageSelector'
@@ -76,13 +77,6 @@ export default function CodingPage() {
   const hasResult = generatedCode || explanation
   const canGenerate = imagePreview || question.trim()
 
-  const tabStyle = (active: boolean) => ({
-    background: active ? 'var(--accent-gradient)' : 'var(--bg-tertiary)',
-    color: active ? 'white' : 'var(--text-muted)',
-    border: active ? '1px solid transparent' : '1px solid var(--border)',
-    boxShadow: active ? 'var(--shadow-glow)' : 'none'
-  })
-
   return (
     <div className="flex flex-col gap-4 h-full animate-fadeIn">
       <div className="flex items-center justify-between">
@@ -109,8 +103,7 @@ export default function CodingPage() {
               <button
                 key={id}
                 onClick={() => { setInputTab(id); setImagePreview(null) }}
-                className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5"
-                style={tabStyle(inputTab === id)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer flex items-center gap-1.5 pill-toggle${inputTab === id ? ' pill-toggle-active' : ''}`}
               >
                 <Icon size={13} />
                 {label}
@@ -128,14 +121,13 @@ export default function CodingPage() {
                       <ClipboardIcon size={9} className="mr-1" />Paste
                     </Badge>
                   </div>
-                  <textarea
+                  <TextArea
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="Paste your coding question here...&#10;&#10;e.g., Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target."
+                    placeholder={"Paste your coding question here...\n\ne.g., Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target."}
                     rows={8}
                     disabled={isStreaming}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm resize-none"
-                    style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: "'Inter', sans-serif", lineHeight: '1.6' }}
+                    style={{ fontFamily: "'Inter', sans-serif", lineHeight: '1.6' }}
                   />
                 </>
               )}
@@ -164,10 +156,7 @@ export default function CodingPage() {
                     <button
                       onClick={handlePickImage}
                       disabled={isStreaming}
-                      className="w-full py-12 rounded-xl border-2 border-dashed cursor-pointer transition-all flex flex-col items-center gap-3"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-subtle)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'transparent' }}
+                      className="drop-zone w-full py-12 rounded-xl border-2 border-dashed cursor-pointer flex flex-col items-center gap-3"
                     >
                       <ImageIcon size={32} />
                       <span className="text-sm font-medium">Click to select an image</span>
@@ -201,10 +190,7 @@ export default function CodingPage() {
                     <button
                       onClick={handleCaptureScreen}
                       disabled={isStreaming}
-                      className="w-full py-12 rounded-xl border-2 border-dashed cursor-pointer transition-all flex flex-col items-center gap-3"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--accent-subtle)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'transparent' }}
+                      className="drop-zone w-full py-12 rounded-xl border-2 border-dashed cursor-pointer flex flex-col items-center gap-3"
                     >
                       <MonitorIcon size={32} />
                       <span className="text-sm font-medium">Capture your screen</span>

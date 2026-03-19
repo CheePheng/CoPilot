@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { ollamaService } from './ollamaService'
 import { claudeService } from './claudeService'
 import type { UserProfile } from './promptBuilder'
+import { extractJson } from './jsonParser'
 
 export type SupportedLanguage = 'javascript' | 'typescript' | 'python' | 'java' | 'cpp'
 
@@ -44,6 +45,8 @@ export class CodingService extends EventEmitter {
   private currentAbortController: AbortController | null = null
   private currentProvider: 'ollama' | 'claude' = 'ollama'
   private profile: UserProfile | null = null
+  private claudeModel: string = 'claude-sonnet-4-20250514'
+  private ollamaVisionModel: string = 'llava'
 
   setProvider(provider: 'ollama' | 'claude'): void {
     this.currentProvider = provider
@@ -51,6 +54,14 @@ export class CodingService extends EventEmitter {
 
   setProfile(profile: UserProfile | null): void {
     this.profile = profile
+  }
+
+  setClaudeModel(model: string): void {
+    this.claudeModel = model
+  }
+
+  setOllamaVisionModel(model: string): void {
+    this.ollamaVisionModel = model
   }
 
   async generateCode(request: CodingRequest): Promise<void> {
@@ -167,19 +178,18 @@ export class CodingService extends EventEmitter {
   }
 
   private async streamClaude(userPrompt: string, language: SupportedLanguage): Promise<void> {
-    if (!claudeService.isConfigured()) {
-      throw new Error('Claude API key not set')
-    }
+    const apiKey = claudeService.getApiKey()
+    if (!apiKey) throw new Error('Claude API key not configured')
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': claudeService.getApiKey() || '',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: this.claudeModel,
         max_tokens: 2048,
         system: CODING_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
@@ -245,7 +255,7 @@ export class CodingService extends EventEmitter {
 
   private parseResult(text: string, language: SupportedLanguage): CodingResult {
     try {
-      const jsonStr = this.extractJson(text)
+      const jsonStr = extractJson(text)
       if (jsonStr) {
         const parsed = JSON.parse(jsonStr) as Record<string, unknown>
         return {
@@ -271,36 +281,6 @@ export class CodingService extends EventEmitter {
       spaceComplexity: 'See explanation',
       language
     }
-  }
-
-  private extractJson(text: string): string | null {
-    try {
-      JSON.parse(text.trim())
-      return text.trim()
-    } catch {
-      // Not pure JSON
-    }
-
-    const start = text.indexOf('{')
-    if (start === -1) return null
-
-    let depth = 0
-    let inString = false
-    let escape = false
-
-    for (let i = start; i < text.length; i++) {
-      const ch = text[i]
-      if (escape) { escape = false; continue }
-      if (ch === '\\' && inString) { escape = true; continue }
-      if (ch === '"') { inString = !inString; continue }
-      if (inString) continue
-      if (ch === '{') depth++
-      else if (ch === '}') {
-        depth--
-        if (depth === 0) return text.slice(start, i + 1)
-      }
-    }
-    return null
   }
 
   async generateCodeFromImage(
@@ -341,7 +321,7 @@ export class CodingService extends EventEmitter {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'llava',
+        model: this.ollamaVisionModel,
         messages: [
           { role: 'system', content: CODING_SYSTEM_PROMPT },
           {
@@ -410,17 +390,18 @@ export class CodingService extends EventEmitter {
     languageLabel: string,
     language: SupportedLanguage
   ): Promise<void> {
-    if (!claudeService.isConfigured()) throw new Error('Claude API key not set')
+    const apiKey = claudeService.getApiKey()
+    if (!apiKey) throw new Error('Claude API key not configured')
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': claudeService.getApiKey() || '',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: this.claudeModel,
         max_tokens: 2048,
         system: CODING_SYSTEM_PROMPT,
         messages: [{

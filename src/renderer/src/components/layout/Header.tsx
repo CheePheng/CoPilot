@@ -47,39 +47,13 @@ export default function Header({ currentPage, onNavigate }: HeaderProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate?.('settings')}
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'var(--accent-subtle)',
-              color: 'var(--accent)',
-              border: '1px solid transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--accent)'
-              e.currentTarget.style.boxShadow = 'var(--shadow-glow)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'transparent'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
+            className="provider-badge-ai text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
           >
             {aiProvider}
           </button>
           <button
             onClick={() => onNavigate?.('settings')}
-            className="text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-muted)',
-              border: '1px solid transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-hover)'
-              e.currentTarget.style.color = 'var(--text-secondary)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'transparent'
-              e.currentTarget.style.color = 'var(--text-muted)'
-            }}
+            className="provider-badge-stt text-[10px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider cursor-pointer transition-all"
           >
             {sttProvider === 'web-speech' ? 'Web STT' : 'Deepgram'}
           </button>

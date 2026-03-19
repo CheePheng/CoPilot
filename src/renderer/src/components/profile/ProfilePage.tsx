@@ -1,6 +1,7 @@
-import { useProfileStore, type KnowledgeSnippet } from '../../stores/profileStore'
+import { useProfileStore } from '../../stores/profileStore'
 import StoryBank from './StoryBank'
 import Button from '../ui/Button'
+import { TextInput, TextArea, SelectInput } from '../ui/Input'
 import { LightbulbIcon } from '../ui/Icons'
 
 export default function ProfilePage() {
@@ -16,13 +17,6 @@ export default function ProfilePage() {
     removeKnowledgeSnippet
   } = useProfileStore()
 
-  const inputStyle = {
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-    transition: 'all 0.2s ease'
-  }
-
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
       {/* Role Info */}
@@ -31,49 +25,32 @@ export default function ProfilePage() {
           Target Role
         </h3>
         <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Role Title
-            </label>
-            <input
-              value={profile.targetRole}
-              onChange={(e) => setTargetRole(e.target.value)}
-              placeholder="e.g., Senior Software Engineer"
-              className="w-full px-3 py-2 rounded-xl text-sm"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Seniority
-            </label>
-            <select
-              value={profile.seniority}
-              onChange={(e) => setSeniority(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-sm"
-              style={inputStyle}
-            >
-              <option value="">Select...</option>
-              <option value="junior">Junior / Entry-level</option>
-              <option value="mid">Mid-level</option>
-              <option value="senior">Senior</option>
-              <option value="staff">Staff / Principal</option>
-              <option value="manager">Manager / Director</option>
-              <option value="executive">VP / Executive</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-              Industry
-            </label>
-            <input
-              value={profile.industry}
-              onChange={(e) => setIndustry(e.target.value)}
-              placeholder="e.g., FinTech, SaaS"
-              className="w-full px-3 py-2 rounded-xl text-sm"
-              style={inputStyle}
-            />
-          </div>
+          <TextInput
+            label="Role Title"
+            value={profile.targetRole}
+            onChange={(e) => setTargetRole(e.target.value)}
+            placeholder="e.g., Senior Software Engineer"
+          />
+          <SelectInput
+            label="Seniority"
+            value={profile.seniority}
+            onChange={(e) => setSeniority(e.target.value)}
+            options={[
+              { value: '', label: 'Select...' },
+              { value: 'junior', label: 'Junior / Entry-level' },
+              { value: 'mid', label: 'Mid-level' },
+              { value: 'senior', label: 'Senior' },
+              { value: 'staff', label: 'Staff / Principal' },
+              { value: 'manager', label: 'Manager / Director' },
+              { value: 'executive', label: 'VP / Executive' }
+            ]}
+          />
+          <TextInput
+            label="Industry"
+            value={profile.industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            placeholder="e.g., FinTech, SaaS"
+          />
         </div>
       </section>
 
@@ -82,13 +59,12 @@ export default function ProfilePage() {
         <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           Resume
         </h3>
-        <textarea
+        <TextArea
           value={profile.resumeText}
           onChange={(e) => setResumeText(e.target.value)}
           placeholder="Paste your resume text here. Include key experiences, skills, and achievements."
           rows={8}
-          className="w-full px-3 py-2 rounded-xl text-sm resize-y"
-          style={inputStyle}
+          className="resize-y"
         />
       </section>
 
@@ -97,13 +73,12 @@ export default function ProfilePage() {
         <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
           Job Description
         </h3>
-        <textarea
+        <TextArea
           value={profile.jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
           placeholder="Paste the job description for the role you're interviewing for."
           rows={6}
-          className="w-full px-3 py-2 rounded-xl text-sm resize-y"
-          style={inputStyle}
+          className="resize-y"
         />
       </section>
 
@@ -121,7 +96,7 @@ export default function ProfilePage() {
             size="sm"
             onClick={() =>
               addKnowledgeSnippet({
-                id: Date.now().toString(),
+                id: crypto.randomUUID(),
                 key: '',
                 value: ''
               })
@@ -135,26 +110,23 @@ export default function ProfilePage() {
         </p>
         {profile.knowledgeSnippets.map((snippet) => (
           <div key={snippet.id} className="flex gap-2 items-start">
-            <input
-              value={snippet.key}
-              onChange={(e) => updateKnowledgeSnippet(snippet.id, { key: e.target.value })}
-              placeholder="e.g., Current project"
-              className="w-[160px] px-3 py-2 rounded-xl text-sm"
-              style={inputStyle}
-            />
-            <input
-              value={snippet.value}
-              onChange={(e) => updateKnowledgeSnippet(snippet.id, { value: e.target.value })}
-              placeholder="e.g., Building a React dashboard with GraphQL"
-              className="flex-1 px-3 py-2 rounded-xl text-sm"
-              style={inputStyle}
-            />
+            <div className="w-[160px]">
+              <TextInput
+                value={snippet.key}
+                onChange={(e) => updateKnowledgeSnippet(snippet.id, { key: e.target.value })}
+                placeholder="e.g., Current project"
+              />
+            </div>
+            <div className="flex-1">
+              <TextInput
+                value={snippet.value}
+                onChange={(e) => updateKnowledgeSnippet(snippet.id, { value: e.target.value })}
+                placeholder="e.g., Building a React dashboard with GraphQL"
+              />
+            </div>
             <button
               onClick={() => removeKnowledgeSnippet(snippet.id)}
-              className="px-2 py-2 rounded-lg text-xs cursor-pointer transition-all"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)' }}
+              className="snippet-remove px-2 py-2 rounded-lg text-xs cursor-pointer mt-0.5"
             >
               x
             </button>

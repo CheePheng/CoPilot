@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useProfileStore, type StoryEntry } from '../../stores/profileStore'
+import { TextInput, TextArea } from '../ui/Input'
 
 const TAG_OPTIONS = [
   'leadership', 'teamwork', 'conflict', 'failure', 'success',
@@ -28,7 +29,7 @@ export default function StoryBank() {
 
   const handleAdd = () => {
     if (!newStory.title.trim()) return
-    addStory({ ...newStory, id: `story-${Date.now()}` })
+    addStory({ ...newStory, id: crypto.randomUUID() })
     setNewStory({ title: '', situation: '', task: '', action: '', result: '', tags: [] })
     setIsAdding(false)
   }
@@ -38,13 +39,6 @@ export default function StoryBank() {
       ...prev,
       tags: prev.tags.includes(tag) ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag]
     }))
-  }
-
-  const inputStyle = {
-    backgroundColor: 'var(--bg-tertiary)',
-    border: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-    transition: 'all 0.2s ease'
   }
 
   return (
@@ -67,15 +61,13 @@ export default function StoryBank() {
       {/* Add form */}
       {isAdding && (
         <div className="glass-panel p-5 space-y-3 animate-slideUp">
-          <input
+          <TextInput
             value={newStory.title}
             onChange={(e) => setNewStory((p) => ({ ...p, title: e.target.value }))}
             placeholder="Story title (e.g., 'Led migration to microservices')"
-            className="w-full px-3 py-2 rounded-xl text-sm"
-            style={inputStyle}
           />
           {(['situation', 'task', 'action', 'result'] as const).map((field) => (
-            <textarea
+            <TextArea
               key={field}
               value={newStory[field]}
               onChange={(e) => setNewStory((p) => ({ ...p, [field]: e.target.value }))}
@@ -86,8 +78,7 @@ export default function StoryBank() {
                 'What was the outcome? Include metrics.'
               }`}
               rows={2}
-              className="w-full px-3 py-2 rounded-xl text-sm resize-y"
-              style={inputStyle}
+              className="resize-y"
             />
           ))}
 
@@ -101,12 +92,7 @@ export default function StoryBank() {
                 <button
                   key={tag}
                   onClick={() => toggleTag(tag)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] cursor-pointer transition-all font-medium"
-                  style={{
-                    background: newStory.tags.includes(tag) ? 'var(--accent-gradient)' : 'var(--bg-tertiary)',
-                    color: newStory.tags.includes(tag) ? 'white' : 'var(--text-muted)',
-                    border: `1px solid ${newStory.tags.includes(tag) ? 'transparent' : 'var(--border)'}`
-                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] cursor-pointer transition-all font-medium pill-toggle${newStory.tags.includes(tag) ? ' pill-toggle-active' : ''}`}
                 >
                   {tag}
                 </button>
@@ -138,16 +124,8 @@ export default function StoryBank() {
         {profile.storyBank.map((story) => (
           <div
             key={story.id}
-            className="glass-panel p-4 transition-all hover:shadow-lg"
+            className="glass-panel story-card p-4"
             style={{ cursor: 'default' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)'
-              e.currentTarget.style.borderColor = 'rgba(124, 92, 252, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.borderColor = 'var(--glass-border)'
-            }}
           >
             <div className="flex items-start justify-between mb-3">
               <h4 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>

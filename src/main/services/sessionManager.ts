@@ -8,6 +8,8 @@ import { historyService } from './historyService'
 
 export type SessionState = 'idle' | 'active' | 'paused'
 
+const MAX_TRANSCRIPT_HISTORY = 500
+
 export class SessionManager extends EventEmitter {
   private state: SessionState = 'idle'
   private profile: UserProfile | null = null
@@ -101,6 +103,7 @@ export class SessionManager extends EventEmitter {
     // STT transcripts → question detector + UI
     stt.on('transcript', (result: TranscriptResult) => {
       this.transcriptHistory.push(result)
+      if (this.transcriptHistory.length > MAX_TRANSCRIPT_HISTORY) this.transcriptHistory.shift()
       questionDetector.addTranscript(result)
 
       const entry = {
