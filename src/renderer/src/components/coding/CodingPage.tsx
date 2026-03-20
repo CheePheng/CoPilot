@@ -220,8 +220,12 @@ export default function CodingPage() {
           </div>
 
           {error && (
-            <div className="px-4 py-3 rounded-xl text-sm" style={{ backgroundColor: 'var(--danger-subtle)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-              {error}
+            <div style={{ backgroundColor: 'var(--danger-subtle)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 16px' }}>
+              <p className="text-sm" style={{ color: 'var(--danger)' }}>{error}</p>
+              <div className="flex gap-2 mt-2">
+                <Button variant="danger" size="sm" onClick={handleGenerate}>Retry</Button>
+                <Button variant="ghost" size="sm" onClick={() => setError(null)}>Dismiss</Button>
+              </div>
             </div>
           )}
         </div>

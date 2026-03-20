@@ -24,7 +24,7 @@ interface MockState {
   startEvaluation: () => void
   appendEvalChunk: (text: string) => void
   finishEvaluation: (question: string, answer: string, evaluation: MockEvaluation) => void
-  setError: (error: string) => void
+  setError: (error: string | null) => void
   reset: () => void
 }
 
@@ -63,6 +63,7 @@ export const useMockStore = create<MockState>((set) => ({
     }
   }),
   setError: (error) => set({ error, isGeneratingQuestion: false, isEvaluating: false }),
+
   reset: () => set({
     currentQuestion: '',
     questionStreamText: '',

@@ -28,6 +28,8 @@ export interface Profile {
 
 interface ProfileState {
   profile: Profile
+  isSaving: boolean
+  lastSaved: number | null
   setTargetRole: (role: string) => void
   setSeniority: (seniority: string) => void
   setIndustry: (industry: string) => void
@@ -44,14 +46,18 @@ interface ProfileState {
 
 const PROFILE_KEY = 'profile'
 
+type SetFn = (partial: Partial<ProfileState>) => void
+
 const saveState = { timer: null as ReturnType<typeof setTimeout> | null }
 
-function debouncedSave(profile: Profile): void {
+function debouncedSave(profile: Profile, set: SetFn): void {
   if (saveState.timer) clearTimeout(saveState.timer)
-  saveState.timer = setTimeout(() => {
+  set({ isSaving: true })
+  saveState.timer = setTimeout(async () => {
     saveState.timer = null
     window.copilot?.storage?.set(PROFILE_KEY, profile)
     window.copilot?.profile?.sync(profile)
+    set({ isSaving: false, lastSaved: Date.now() })
   }, 500)
 }
 
@@ -65,32 +71,34 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     storyBank: [],
     knowledgeSnippets: []
   },
+  isSaving: false,
+  lastSaved: null,
 
   setTargetRole: (role) => {
     set((state) => ({ profile: { ...state.profile, targetRole: role } }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   setSeniority: (seniority) => {
     set((state) => ({ profile: { ...state.profile, seniority } }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   setIndustry: (industry) => {
     set((state) => ({ profile: { ...state.profile, industry } }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   setResumeText: (text) => {
     set((state) => ({ profile: { ...state.profile, resumeText: text } }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   setJobDescription: (text) => {
     set((state) => ({ profile: { ...state.profile, jobDescription: text } }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   addStory: (story) => {
     set((state) => ({
       profile: { ...state.profile, storyBank: [...state.profile.storyBank, story] }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   updateStory: (id, updates) => {
     set((state) => ({
@@ -101,7 +109,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         )
       }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   removeStory: (id) => {
     set((state) => ({
@@ -110,13 +118,13 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         storyBank: state.profile.storyBank.filter((s) => s.id !== id)
       }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   addKnowledgeSnippet: (snippet) => {
     set((state) => ({
       profile: { ...state.profile, knowledgeSnippets: [...state.profile.knowledgeSnippets, snippet] }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   updateKnowledgeSnippet: (id, updates) => {
     set((state) => ({
@@ -127,7 +135,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         )
       }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   removeKnowledgeSnippet: (id) => {
     set((state) => ({
@@ -136,7 +144,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         knowledgeSnippets: state.profile.knowledgeSnippets.filter((s) => s.id !== id)
       }
     }))
-    debouncedSave(get().profile)
+    debouncedSave(get().profile, set)
   },
   loadFromDisk: async () => {
     try {

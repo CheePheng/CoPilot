@@ -4,6 +4,8 @@ import type { UserProfile } from './promptBuilder'
 import type { DetectedQuestion } from './questionDetector'
 import type { AIProvider, AnswerResult } from './types'
 import { extractJson } from './jsonParser'
+import { withRetry } from './retryHelper'
+import { sessionContext } from './sessionContext'
 
 const JSON_INSTRUCTION = `
 
@@ -33,7 +35,7 @@ export class OllamaService extends EventEmitter implements AIProvider {
 
   async listModels(): Promise<string[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`)
+      const response = await withRetry(() => fetch(`${this.baseUrl}/api/tags`))
       if (!response.ok) return []
       const data = (await response.json()) as { models: Array<{ name: string }> }
       return data.models?.map((m) => m.name) || []
@@ -44,7 +46,7 @@ export class OllamaService extends EventEmitter implements AIProvider {
 
   async checkConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`)
+      const response = await withRetry(() => fetch(`${this.baseUrl}/api/tags`))
       return response.ok
     } catch {
       return false
@@ -60,28 +62,32 @@ export class OllamaService extends EventEmitter implements AIProvider {
     this.currentAbortController = new AbortController()
 
     const systemPrompt = buildSystemPrompt(profile)
-    const userMessage = buildAnswerPrompt(question, recentContext) + JSON_INSTRUCTION
+    const contextSummary = sessionContext.getSummary() || undefined
+    const userMessage = buildAnswerPrompt(question, recentContext, 45, contextSummary) + JSON_INSTRUCTION
 
     try {
       this.emit('status', 'generating')
 
-      const response = await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage }
-          ],
-          stream: true,
-          options: {
-            temperature: 0.7,
-            num_predict: 1024
-          }
+      const response = await withRetry(
+        () => fetch(`${this.baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userMessage }
+            ],
+            stream: true,
+            options: {
+              temperature: 0.7,
+              num_predict: 1024
+            }
+          }),
+          signal: this.currentAbortController.signal
         }),
-        signal: this.currentAbortController.signal
-      })
+        { signal: this.currentAbortController.signal }
+      )
 
       if (!response.ok) {
         const errorText = await response.text()

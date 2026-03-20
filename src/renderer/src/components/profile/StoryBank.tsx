@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useProfileStore, type StoryEntry } from '../../stores/profileStore'
 import { TextInput, TextArea } from '../ui/Input'
 
@@ -18,6 +18,8 @@ const STAR_LABELS = [
 export default function StoryBank() {
   const { profile, addStory, removeStory } = useProfileStore()
   const [isAdding, setIsAdding] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [newStory, setNewStory] = useState<Omit<StoryEntry, 'id'>>({
     title: '',
     situation: '',
@@ -26,6 +28,30 @@ export default function StoryBank() {
     result: '',
     tags: []
   })
+
+  const handleDeleteClick = (id: string) => {
+    if (confirmDeleteId === id) {
+      // Second click — confirm delete
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      confirmTimerRef.current = null
+      setConfirmDeleteId(null)
+      removeStory(id)
+    } else {
+      // First click — enter confirm state
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+      setConfirmDeleteId(id)
+      confirmTimerRef.current = setTimeout(() => {
+        setConfirmDeleteId(null)
+        confirmTimerRef.current = null
+      }, 3000)
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    }
+  }, [])
 
   const handleAdd = () => {
     if (!newStory.title.trim()) return
@@ -132,11 +158,14 @@ export default function StoryBank() {
                 {story.title}
               </h4>
               <button
-                onClick={() => removeStory(story.id)}
-                className="text-[11px] px-2 py-0.5 rounded-lg cursor-pointer transition-colors"
-                style={{ color: 'var(--danger)', backgroundColor: 'var(--danger-subtle)' }}
+                onClick={() => handleDeleteClick(story.id)}
+                className="text-[11px] px-2 py-0.5 rounded-lg cursor-pointer transition-all"
+                style={{
+                  color: confirmDeleteId === story.id ? 'white' : 'var(--danger)',
+                  backgroundColor: confirmDeleteId === story.id ? 'var(--danger)' : 'var(--danger-subtle)'
+                }}
               >
-                Remove
+                {confirmDeleteId === story.id ? 'Confirm?' : 'Remove'}
               </button>
             </div>
 

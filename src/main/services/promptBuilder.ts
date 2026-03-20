@@ -1,5 +1,17 @@
 import type { DetectedQuestion } from './questionDetector'
 
+// Task 16: Strip prompt injection patterns from user-supplied text
+export function sanitizeProfileData(text: string): string {
+  return text
+    .replace(/<\/?system>/gi, '')
+    .replace(/IGNORE\s+PREVIOUS/gi, '')
+    .replace(/DISREGARD/gi, '')
+    .replace(/FORGET/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\[\s*INST\s*\]/gi, '')
+    .replace(/\[\s*\/INST\s*\]/gi, '')
+}
+
 export interface KnowledgeSnippet {
   id: string
   key: string
@@ -38,29 +50,36 @@ Output rules:
 export function buildSystemPrompt(profile: UserProfile | null): string {
   if (!profile) return SYSTEM_PROMPT_BASE
 
+  // Task 16: sanitize all user-supplied string fields before injection
+  const safeTargetRole = sanitizeProfileData(profile.targetRole)
+  const safeSeniority = sanitizeProfileData(profile.seniority)
+  const safeIndustry = sanitizeProfileData(profile.industry)
+  const safeResumeText = sanitizeProfileData(profile.resumeText)
+  const safeJobDescription = sanitizeProfileData(profile.jobDescription)
+
   return `${SYSTEM_PROMPT_BASE}
 
 <user_profile>
-<role_target>${profile.targetRole}</role_target>
-<seniority>${profile.seniority}</seniority>
-<industry>${profile.industry}</industry>
+<role_target>${safeTargetRole}</role_target>
+<seniority>${safeSeniority}</seniority>
+<industry>${safeIndustry}</industry>
 
 <resume_highlights>
-${profile.resumeText}
+${safeResumeText}
 </resume_highlights>
 
 <job_description>
-${profile.jobDescription}
+${safeJobDescription}
 </job_description>
 
 <story_bank>
 ${profile.storyBank
   .map(
-    (s) => `<story title="${s.title}" tags="${s.tags.join(', ')}">
-  Situation: ${s.situation}
-  Task: ${s.task}
-  Action: ${s.action}
-  Result: ${s.result}
+    (s) => `<story title="${sanitizeProfileData(s.title)}" tags="${s.tags.map(sanitizeProfileData).join(', ')}">
+  Situation: ${sanitizeProfileData(s.situation)}
+  Task: ${sanitizeProfileData(s.task)}
+  Action: ${sanitizeProfileData(s.action)}
+  Result: ${sanitizeProfileData(s.result)}
 </story>`
   )
   .join('\n')}
@@ -70,7 +89,7 @@ ${
     ? `<knowledge_context>
 ${profile.knowledgeSnippets
   .filter((s) => s.key && s.value)
-  .map((s) => `<fact key="${s.key}">${s.value}</fact>`)
+  .map((s) => `<fact key="${sanitizeProfileData(s.key)}">${sanitizeProfileData(s.value)}</fact>`)
   .join('\n')}
 </knowledge_context>`
     : ''
@@ -81,8 +100,13 @@ ${profile.knowledgeSnippets
 export function buildAnswerPrompt(
   question: DetectedQuestion,
   recentContext: string,
-  timeBudgetSeconds: number = 45
+  timeBudgetSeconds: number = 45,
+  sessionContextSummary?: string
 ): string {
+  const contextBlock = sessionContextSummary
+    ? `\n<session_context>\n${sessionContextSummary}\n</session_context>\n\nUse the session context to build on previous discussion. Don't repeat topics already covered. Reference earlier answers when relevant.`
+    : ''
+
   return `<input>
 <mode>live_coaching</mode>
 <live_context>
@@ -96,12 +120,14 @@ export function buildAnswerPrompt(
 <format>structured</format>
 </constraints>
 </input>
-
+${contextBlock}
 <task>
 Generate a truthful, role-aligned answer outline that the user can speak naturally.
 If the question is unclear, suggest ONE short clarification question.
 Also provide 2 optional "supporting details" the user can add if time allows.
 Predict 2-3 likely follow-up questions.
+Include a "confidence" field at the end of your response indicating how confident this answer is: high, medium, or low.
+Format: [confidence: high] or [confidence: medium] or [confidence: low]
 </task>`
 }
 
@@ -172,13 +198,55 @@ Score each dimension 0-10:
 - evidence: Does the answer use specific examples, metrics, or data?
 - structure: Is the answer well-organized (e.g., STAR format)?
 - authenticity: Does the answer feel genuine and unrehearsed?
+- conciseness: Is the answer appropriately brief and on-point without padding?
 </rubric>
 
 <instructions>
 Evaluate the candidate's answer. You MUST respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
-{"clarity":N,"evidence":N,"structure":N,"authenticity":N,"strengths":["strength1","strength2"],"improvements":["improvement1","improvement2"],"gold_answer":"A concise, improved version of their answer"}
+{"clarity":N,"evidence":N,"structure":N,"authenticity":N,"conciseness":N,"strengths":["strength1","strength2"],"improvements":["improvement1","improvement2"],"gold_answer":"A concise, improved version of their answer"}
 </instructions>
 </mock_evaluation>`
+}
+
+// Task 15: Compare two answers for the same question
+export function buildComparisonPrompt(
+  question: string,
+  prevAnswer: string,
+  currAnswer: string,
+  prevScores: Record<string, number>,
+  currScores: Record<string, number>,
+  targetRole: string
+): string {
+  const prevScoreStr = Object.entries(prevScores).map(([k, v]) => `${k}: ${v}`).join(', ')
+  const currScoreStr = Object.entries(currScores).map(([k, v]) => `${k}: ${v}`).join(', ')
+
+  return `<answer_comparison>
+<target_role>${sanitizeProfileData(targetRole)}</target_role>
+<question>${sanitizeProfileData(question)}</question>
+
+<previous_answer>
+${sanitizeProfileData(prevAnswer)}
+<scores>${prevScoreStr}</scores>
+</previous_answer>
+
+<current_answer>
+${sanitizeProfileData(currAnswer)}
+<scores>${currScoreStr}</scores>
+</current_answer>
+
+<instructions>
+Compare these two answers to the same interview question. Identify what improved, what regressed, and what stayed the same between the previous and current answer.
+You MUST respond with ONLY valid JSON in this exact format (no markdown, no code blocks):
+{"improved":["area1","area2"],"regressed":["area1"],"unchanged":["area1"],"overallDelta":1.5,"advice":"specific actionable advice for further improvement"}
+
+Rules:
+- "improved": areas where the current answer is meaningfully better than the previous
+- "regressed": areas where the current answer is worse
+- "unchanged": areas that are about the same
+- "overallDelta": a number (positive = overall improvement, negative = regression, 0 = same). Range: -10 to +10
+- "advice": one to two sentences of specific, actionable advice for the ${sanitizeProfileData(targetRole)} role
+</instructions>
+</answer_comparison>`
 }
 
 export const ANSWER_TOOL_SCHEMA = {

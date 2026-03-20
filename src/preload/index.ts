@@ -137,6 +137,18 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
       ipcRenderer.on('mock:error', handler)
       return () => ipcRenderer.removeListener('mock:error', handler)
+    },
+    compare: (question: string, prevAnswer: string, currAnswer: string, prevScores: object, currScores: object, config: object) =>
+      ipcRenderer.invoke('mock:compare', { question, prevAnswer, currAnswer, prevScores, currScores, config }),
+    onComparisonChunk: (cb: (chunk: string) => void) => {
+      const handler = (_: Electron.IpcRendererEvent, chunk: string) => cb(chunk)
+      ipcRenderer.on('mock:comparison-chunk', handler)
+      return () => ipcRenderer.removeListener('mock:comparison-chunk', handler)
+    },
+    onComparisonComplete: (cb: (result: unknown) => void) => {
+      const handler = (_: Electron.IpcRendererEvent, result: unknown) => cb(result)
+      ipcRenderer.on('mock:comparison-complete', handler)
+      return () => ipcRenderer.removeListener('mock:comparison-complete', handler)
     }
   },
 }

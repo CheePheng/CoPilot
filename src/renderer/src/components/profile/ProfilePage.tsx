@@ -4,9 +4,22 @@ import Button from '../ui/Button'
 import { TextInput, TextArea, SelectInput } from '../ui/Input'
 import { LightbulbIcon } from '../ui/Icons'
 
+function formatRelativeTime(ts: number): string {
+  const diffMs = Date.now() - ts
+  const diffSec = Math.floor(diffMs / 1000)
+  if (diffSec < 10) return 'just now'
+  if (diffSec < 60) return `${diffSec}s ago`
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  return `${diffHr}h ago`
+}
+
 export default function ProfilePage() {
   const {
     profile,
+    isSaving,
+    lastSaved,
     setTargetRole,
     setSeniority,
     setIndustry,
@@ -19,6 +32,19 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
+      {/* Save indicator */}
+      <div className="flex justify-end h-5">
+        {isSaving && (
+          <span className="text-xs animate-fadeIn" style={{ color: 'var(--text-muted)' }}>
+            Saving...
+          </span>
+        )}
+        {!isSaving && lastSaved !== null && (
+          <span className="text-xs animate-fadeIn" style={{ color: 'var(--success)' }}>
+            Saved {formatRelativeTime(lastSaved)}
+          </span>
+        )}
+      </div>
       {/* Role Info */}
       <section className="glass-panel p-5 space-y-4">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>

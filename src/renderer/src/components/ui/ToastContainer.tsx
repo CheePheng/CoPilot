@@ -11,7 +11,9 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="rounded-xl px-4 py-3 shadow-lg flex items-start gap-3 animate-[slideUp_0.3s_ease]"
+          role="alert"
+          aria-live="assertive"
+          className="rounded-xl px-4 py-3 shadow-lg flex items-start gap-3 toast-enter"
           style={{
             backgroundColor:
               toast.type === 'error'
@@ -37,6 +39,7 @@ export default function ToastContainer() {
           </p>
           <button
             onClick={() => removeToast(toast.id)}
+            aria-label="Dismiss"
             className="text-xs shrink-0 cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
             style={{ color: 'var(--text-secondary)' }}
           >

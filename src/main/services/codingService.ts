@@ -3,6 +3,7 @@ import { ollamaService } from './ollamaService'
 import { claudeService } from './claudeService'
 import type { UserProfile } from './promptBuilder'
 import { extractJson } from './jsonParser'
+import { withRetry } from './retryHelper'
 
 export type SupportedLanguage = 'javascript' | 'typescript' | 'python' | 'java' | 'cpp'
 
@@ -110,20 +111,23 @@ export class CodingService extends EventEmitter {
     const baseUrl = ollamaService.getBaseUrl()
     const model = ollamaService.getModel()
 
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: CODING_SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt }
-        ],
-        stream: true,
-        options: { temperature: 0.4, num_predict: 2048 }
+    const response = await withRetry(
+      () => fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: CODING_SYSTEM_PROMPT },
+            { role: 'user', content: userPrompt }
+          ],
+          stream: true,
+          options: { temperature: 0.4, num_predict: 2048 }
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -181,22 +185,25 @@ export class CodingService extends EventEmitter {
     const apiKey = claudeService.getApiKey()
     if (!apiKey) throw new Error('Claude API key not configured')
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.claudeModel,
-        max_tokens: 2048,
-        system: CODING_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-        stream: true
+    const response = await withRetry(
+      () => fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2025-01-01'
+        },
+        body: JSON.stringify({
+          model: this.claudeModel,
+          max_tokens: 2048,
+          system: CODING_SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: userPrompt }],
+          stream: true
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -317,24 +324,27 @@ export class CodingService extends EventEmitter {
   ): Promise<void> {
     const baseUrl = ollamaService.getBaseUrl()
 
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.ollamaVisionModel,
-        messages: [
-          { role: 'system', content: CODING_SYSTEM_PROMPT },
-          {
-            role: 'user',
-            content: `Look at this coding question image and solve it in ${languageLabel}. Provide an optimal solution.`,
-            images: [imageBase64]
-          }
-        ],
-        stream: true,
-        options: { temperature: 0.4, num_predict: 2048 }
+    const response = await withRetry(
+      () => fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.ollamaVisionModel,
+          messages: [
+            { role: 'system', content: CODING_SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: `Look at this coding question image and solve it in ${languageLabel}. Provide an optimal solution.`,
+              images: [imageBase64]
+            }
+          ],
+          stream: true,
+          options: { temperature: 0.4, num_predict: 2048 }
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -393,38 +403,41 @@ export class CodingService extends EventEmitter {
     const apiKey = claudeService.getApiKey()
     if (!apiKey) throw new Error('Claude API key not configured')
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.claudeModel,
-        max_tokens: 2048,
-        system: CODING_SYSTEM_PROMPT,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: imageMimeType,
-                data: imageBase64
+    const response = await withRetry(
+      () => fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2025-01-01'
+        },
+        body: JSON.stringify({
+          model: this.claudeModel,
+          max_tokens: 2048,
+          system: CODING_SYSTEM_PROMPT,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: imageMimeType,
+                  data: imageBase64
+                }
+              },
+              {
+                type: 'text',
+                text: `Look at this coding question and solve it in ${languageLabel}. Provide an optimal solution.`
               }
-            },
-            {
-              type: 'text',
-              text: `Look at this coding question and solve it in ${languageLabel}. Provide an optimal solution.`
-            }
-          ]
-        }],
-        stream: true
+            ]
+          }],
+          stream: true
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()

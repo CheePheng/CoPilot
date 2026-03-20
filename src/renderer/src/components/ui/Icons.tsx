@@ -1,6 +1,7 @@
 interface IconProps {
   size?: number
   className?: string
+  style?: React.CSSProperties
 }
 
 export function InterviewIcon({ size = 20, className = '' }: IconProps) {

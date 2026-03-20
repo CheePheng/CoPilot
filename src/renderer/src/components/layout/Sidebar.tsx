@@ -9,8 +9,7 @@ import {
   OverlayIcon,
   ShieldIcon
 } from '../ui/Icons'
-
-type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
+import type { Page } from '../../types/navigation'
 
 interface SidebarProps {
   currentPage: Page

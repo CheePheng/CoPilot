@@ -15,9 +15,10 @@ const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
 interface Props {
   code: string
   language: SupportedLanguage
+  isStreaming?: boolean
 }
 
-export default function CodeDisplay({ code, language }: Props) {
+export default function CodeDisplay({ code, language, isStreaming = false }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -64,7 +65,7 @@ export default function CodeDisplay({ code, language }: Props) {
           maxHeight: '400px'
         }}
       >
-        <code>{code}</code>
+        <code>{code}{isStreaming && <span className="code-cursor-blink" />}</code>
       </pre>
     </div>
   )

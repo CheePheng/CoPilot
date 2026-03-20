@@ -40,6 +40,7 @@ export default function Card({
         <div
           className={`flex items-center justify-between ${collapsible ? 'cursor-pointer select-none' : ''} ${collapsed ? '' : 'mb-4'}`}
           onClick={collapsible ? () => setCollapsed(!collapsed) : undefined}
+          aria-expanded={collapsible ? !collapsed : undefined}
         >
           {header}
           {collapsible && (

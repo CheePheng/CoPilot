@@ -6,7 +6,86 @@ import Button from '../ui/Button'
 import Badge from '../ui/Badge'
 import Card from '../ui/Card'
 import { TextArea, SelectInput } from '../ui/Input'
-import type { MockEvaluation, StreamChunk } from '../../types/ipc'
+import type { MockEvaluation, MockComparison, StreamChunk } from '../../types/ipc'
+
+function useAnimatedNumber(target: number, duration = 1000) {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    if (target === 0) { setValue(0); return }
+    const start = performance.now()
+    let raf: number
+    const animate = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1)
+      setValue(Math.round(target * progress))
+      if (progress < 1) raf = requestAnimationFrame(animate)
+    }
+    raf = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return value
+}
+
+// Animated score ring sub-component
+function ScoreRing({ score, label }: { score: number; label: string }) {
+  const animatedScore = useAnimatedNumber(score)
+  const pct = (score / 10) * 100
+
+  return (
+    <div className="text-center">
+      <div className="relative w-16 h-16 mx-auto mb-2">
+        <svg viewBox="0 0 36 36" className="score-ring w-full h-full -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="2" />
+          <circle
+            cx="18" cy="18" r="15.9" fill="none" strokeWidth="2"
+            strokeDasharray={`${pct} ${100 - pct}`}
+            strokeLinecap="round"
+            className="score-ring-value"
+            style={{ stroke: 'url(#scoreGradient)' }}
+          />
+          <defs>
+            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#a855f7" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+          {animatedScore}
+        </span>
+      </div>
+      <div className="text-[10px] font-medium uppercase tracking-wider capitalize" style={{ color: 'var(--text-muted)' }}>
+        {label}
+      </div>
+    </div>
+  )
+}
+
+// Animated average score ring for the summary screen (counts up then shows 1 decimal)
+function AvgScoreRing({ avg, label }: { avg: number; label: string }) {
+  const animatedRaw = useAnimatedNumber(Math.round(avg * 10), 1000)
+  const displayValue = (animatedRaw / 10).toFixed(1)
+  const pct = (avg / 10) * 100
+  return (
+    <div className="text-center">
+      <div className="relative w-16 h-16 mx-auto mb-2">
+        <svg viewBox="0 0 36 36" className="score-ring w-full h-full -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="2" />
+          <circle
+            cx="18" cy="18" r="15.9" fill="none" strokeWidth="2"
+            strokeDasharray={`${pct} ${100 - pct}`}
+            strokeLinecap="round"
+            className="score-ring-value"
+            style={{ stroke: 'url(#scoreGradient)' }}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+          {displayValue}
+        </span>
+      </div>
+      <div className="text-[10px] font-medium uppercase tracking-wider capitalize" style={{ color: 'var(--text-muted)' }}>{label}</div>
+    </div>
+  )
+}
 
 type MockState = 'setup' | 'active' | 'feedback'
 type Difficulty = 'easy' | 'medium' | 'hard'
@@ -20,6 +99,9 @@ export default function MockInterviewPage() {
   const [focusAreas, setFocusAreas] = useState<FocusArea[]>(['behavioral'])
   const [questionCount, setQuestionCount] = useState(5)
   const [answerText, setAnswerText] = useState('')
+  const [lastAction, setLastAction] = useState<'generate' | 'evaluate' | null>(null)
+  const [comparison, setComparison] = useState<MockComparison | null>(null)
+  const [isComparing, setIsComparing] = useState(false)
 
   const toggleFocus = useCallback((area: FocusArea) => {
     setFocusAreas((prev) =>
@@ -47,6 +129,14 @@ export default function MockInterviewPage() {
     })
     const unsubError = window.copilot?.mock?.onError?.((error: string) => {
       mock.setError(error)
+      setIsComparing(false)
+    })
+    const unsubCompChunk = window.copilot?.mock?.onComparisonChunk?.(() => {
+      // streaming comparison — no incremental display needed
+    })
+    const unsubCompComplete = window.copilot?.mock?.onComparisonComplete?.((result: unknown) => {
+      setComparison(result as MockComparison)
+      setIsComparing(false)
     })
 
     return () => {
@@ -55,6 +145,8 @@ export default function MockInterviewPage() {
       unsubEChunk?.()
       unsubEComplete?.()
       unsubError?.()
+      unsubCompChunk?.()
+      unsubCompComplete?.()
     }
   }, [mock.currentQuestion, answerText]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,6 +162,7 @@ export default function MockInterviewPage() {
     mock.reset()
     setAnswerText('')
 
+    setLastAction('generate')
     mock.startQuestionGeneration()
     window.copilot?.mock?.generateQuestion?.({
       targetRole: profile.targetRole || 'Software Engineer',
@@ -82,6 +175,7 @@ export default function MockInterviewPage() {
   const submitAnswer = useCallback(() => {
     if (!answerText.trim() || !mock.currentQuestion) return
 
+    setLastAction('evaluate')
     mock.startEvaluation()
     window.copilot?.mock?.evaluate?.({
       question: mock.currentQuestion,
@@ -96,9 +190,57 @@ export default function MockInterviewPage() {
       return
     }
     setAnswerText('')
+    setComparison(null)
+    setLastAction('generate')
     mock.startQuestionGeneration()
     window.copilot?.mock?.generateQuestion?.(getConfig())
   }, [mock.feedbackHistory.length, questionCount, getConfig]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRetry = useCallback(() => {
+    mock.setError(null)
+    if (lastAction === 'generate') {
+      mock.startQuestionGeneration()
+      window.copilot?.mock?.generateQuestion?.(getConfig())
+    } else if (lastAction === 'evaluate') {
+      if (!answerText.trim() || !mock.currentQuestion) return
+      mock.startEvaluation()
+      window.copilot?.mock?.evaluate?.({
+        question: mock.currentQuestion,
+        answer: answerText,
+        config: getConfig()
+      })
+    }
+  }, [lastAction, answerText, mock.currentQuestion, getConfig]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const compareWithPrevious = useCallback(() => {
+    if (mock.feedbackHistory.length < 2 || !mock.currentFeedback) return
+    // feedbackHistory includes current; previous is second-to-last
+    const prev = mock.feedbackHistory[mock.feedbackHistory.length - 2]
+    setIsComparing(true)
+    setComparison(null)
+    const prevScores: Record<string, number> = {
+      clarity: prev.evaluation.clarity,
+      evidence: prev.evaluation.evidence,
+      structure: prev.evaluation.structure,
+      authenticity: prev.evaluation.authenticity,
+      conciseness: prev.evaluation.conciseness
+    }
+    const currScores: Record<string, number> = {
+      clarity: mock.currentFeedback.evaluation.clarity,
+      evidence: mock.currentFeedback.evaluation.evidence,
+      structure: mock.currentFeedback.evaluation.structure,
+      authenticity: mock.currentFeedback.evaluation.authenticity,
+      conciseness: mock.currentFeedback.evaluation.conciseness
+    }
+    window.copilot?.mock?.compare?.(
+      mock.currentFeedback.question,
+      prev.answer,
+      mock.currentFeedback.answer,
+      prevScores,
+      currScores,
+      getConfig()
+    )
+  }, [mock.feedbackHistory, mock.currentFeedback, getConfig]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const endMock = useCallback(() => {
     window.copilot?.mock?.cancel?.()
@@ -237,32 +379,10 @@ export default function MockInterviewPage() {
 
         {mock.currentFeedback && (
           <div className="glass-panel p-5 space-y-4 animate-slideUp">
-            <div className="grid grid-cols-4 gap-4">
-              {(['clarity', 'evidence', 'structure', 'authenticity'] as const).map((key) => {
+            <div className="grid grid-cols-5 gap-4">
+              {(['clarity', 'evidence', 'structure', 'authenticity', 'conciseness'] as const).map((key) => {
                 const score = mock.currentFeedback!.evaluation[key]
-                const pct = (score / 10) * 100
-                return (
-                  <div key={key} className="text-center">
-                    <div className="relative w-16 h-16 mx-auto mb-2">
-                      <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="2" />
-                        <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="2" strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" style={{ stroke: 'url(#scoreGradient)' }} />
-                        <defs>
-                          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#6366f1" />
-                            <stop offset="100%" stopColor="#a855f7" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                        {score}
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-medium uppercase tracking-wider capitalize" style={{ color: 'var(--text-muted)' }}>
-                      {key}
-                    </div>
-                  </div>
-                )
+                return <ScoreRing key={key} score={score} label={key} />
               })}
             </div>
 
@@ -297,12 +417,82 @@ export default function MockInterviewPage() {
                 </p>
               </div>
             )}
+
+            {/* Compare with Previous button — only visible when there's a prior question in history */}
+            {mock.feedbackHistory.length > 1 && (
+              <div>
+                {!comparison && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={compareWithPrevious}
+                    disabled={isComparing}
+                  >
+                    {isComparing ? 'Comparing...' : 'Compare with Previous Answer'}
+                  </Button>
+                )}
+
+                {comparison && (
+                  <div className="space-y-3 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Comparison with Previous Answer
+                      </p>
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: comparison.overallDelta > 0 ? 'var(--success)' : comparison.overallDelta < 0 ? 'var(--danger)' : 'var(--text-muted)' }}
+                      >
+                        {comparison.overallDelta > 0 ? '+' : ''}{comparison.overallDelta.toFixed(1)} overall
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      {comparison.improved.length > 0 && (
+                        <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--success-subtle)' }}>
+                          <p className="text-[10px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: 'var(--success)' }}>Improved</p>
+                          <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                            {comparison.improved.map((s, j) => <li key={j}>+ {s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {comparison.regressed.length > 0 && (
+                        <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--danger-subtle, rgba(239,68,68,0.08))' }}>
+                          <p className="text-[10px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: 'var(--danger)' }}>Regressed</p>
+                          <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                            {comparison.regressed.map((s, j) => <li key={j}>- {s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {comparison.unchanged.length > 0 && (
+                        <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                          <p className="text-[10px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Unchanged</p>
+                          <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                            {comparison.unchanged.map((s, j) => <li key={j}>= {s}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {comparison.advice && (
+                      <div className="rounded-xl p-3" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                        <p className="text-[10px] font-semibold mb-1 uppercase tracking-wider gradient-text">Advice</p>
+                        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{comparison.advice}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {mock.error && (
-          <div className="px-4 py-3 rounded-xl text-sm" style={{ backgroundColor: 'var(--danger-subtle)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-            {mock.error}
+          <div style={{ backgroundColor: 'var(--danger-subtle)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 16px' }}>
+            <p className="text-sm" style={{ color: 'var(--danger)' }}>{mock.error}</p>
+            <div className="flex gap-2 mt-2">
+              <Button variant="danger" size="sm" onClick={handleRetry}>Retry</Button>
+              <Button variant="ghost" size="sm" onClick={() => mock.setError(null)}>Dismiss</Button>
+            </div>
           </div>
         )}
       </div>
@@ -319,26 +509,12 @@ export default function MockInterviewPage() {
         </Button>
       </div>
 
-      <div className="glass-panel p-5 grid grid-cols-4 gap-4">
-        {(['clarity', 'evidence', 'structure', 'authenticity'] as const).map((key) => {
+      <div className="glass-panel p-5 grid grid-cols-5 gap-4">
+        {(['clarity', 'evidence', 'structure', 'authenticity', 'conciseness'] as const).map((key) => {
           const avg = mock.feedbackHistory.length > 0
             ? mock.feedbackHistory.reduce((sum, f) => sum + f.evaluation[key], 0) / mock.feedbackHistory.length
             : 0
-          const pct = (avg / 10) * 100
-          return (
-            <div key={key} className="text-center">
-              <div className="relative w-16 h-16 mx-auto mb-2">
-                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="2" />
-                  <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="2" strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" style={{ stroke: 'url(#scoreGradient)' }} />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {avg.toFixed(1)}
-                </span>
-              </div>
-              <div className="text-[10px] font-medium uppercase tracking-wider capitalize" style={{ color: 'var(--text-muted)' }}>{key}</div>
-            </div>
-          )
+          return <AvgScoreRing key={key} avg={avg} label={key} />
         })}
       </div>
 
@@ -350,8 +526,8 @@ export default function MockInterviewPage() {
           </div>
         } collapsible defaultCollapsed={i > 0}>
           <div className="space-y-3">
-            <div className="flex gap-2">
-              {(['clarity', 'evidence', 'structure', 'authenticity'] as const).map((k) => (
+            <div className="flex flex-wrap gap-2">
+              {(['clarity', 'evidence', 'structure', 'authenticity', 'conciseness'] as const).map((k) => (
                 <Badge key={k} variant={fb.evaluation[k] >= 7 ? 'success' : fb.evaluation[k] >= 4 ? 'warning' : 'danger'} size="md">
                   {k}: {fb.evaluation[k]}
                 </Badge>

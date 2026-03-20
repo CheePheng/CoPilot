@@ -1,7 +1,6 @@
 import { useSessionStore } from '../../stores/sessionStore'
 import { useSettingsStore } from '../../stores/settingsStore'
-
-type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
+import type { Page } from '../../types/navigation'
 
 const pageLabels: Record<Page, string> = {
   interview: 'Live Interview',

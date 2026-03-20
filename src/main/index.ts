@@ -6,6 +6,14 @@ import { registerIpcHandlers } from './ipc/ipcHandlers'
 import { setupTray } from './tray'
 import { registerGlobalShortcuts, unregisterGlobalShortcuts } from './globalShortcuts'
 
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason)
+})
+
 app.whenReady().then(() => {
   registerIpcHandlers()
 

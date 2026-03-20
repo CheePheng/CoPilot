@@ -17,7 +17,8 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('overlay:set-opacity', (_event, opacity: number) => {
-    windowManager.setOverlayOpacity(opacity)
+    const clamped = Math.min(1, Math.max(0, Number(opacity) || 0))
+    windowManager.setOverlayOpacity(clamped)
   })
 
   ipcMain.handle('overlay:set-click-through', (_event, enabled: boolean) => {
@@ -56,6 +57,10 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('storage:set', (_event, key: string, value: unknown) => {
+    const payload = JSON.stringify(value)
+    if (payload.length > 5 * 1024 * 1024) {
+      return { success: false, error: 'Payload exceeds 5MB limit' }
+    }
     storageService.set(key, value)
     return { success: true }
   })
@@ -72,6 +77,10 @@ export function registerIpcHandlers(): void {
 
   // Coding mode
   ipcMain.handle('coding:generate', async (_event, request: CodingRequest) => {
+    if (!request?.language || typeof request.language !== 'string' || request.language.trim() === '') {
+      return { success: false, error: 'Invalid request: language must be a non-empty string' }
+    }
+
     // Sync provider setting
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
@@ -126,6 +135,11 @@ export function registerIpcHandlers(): void {
 
   // Mock interview
   ipcMain.handle('mock:generate-question', async (_event, config: MockConfig) => {
+    const validDifficulties = ['easy', 'medium', 'hard']
+    if (!config?.difficulty || !validDifficulties.includes(config.difficulty)) {
+      return { success: false, error: `Invalid difficulty: must be one of ${validDifficulties.join(', ')}` }
+    }
+
     const settings = storageService.get('settings') as Record<string, unknown> | undefined
     const provider = (settings?.aiProvider as string) || 'ollama'
     mockService.setProvider(provider as 'ollama' | 'claude')
@@ -189,6 +203,54 @@ export function registerIpcHandlers(): void {
     } finally {
       mockService.removeListener('mock:eval-chunk', onChunk)
       mockService.removeListener('mock:eval-complete', onComplete)
+      mockService.removeListener('mock:error', onError)
+    }
+  })
+
+  ipcMain.handle('mock:compare', async (_event, data: {
+    question: string
+    prevAnswer: string
+    currAnswer: string
+    prevScores: Record<string, number>
+    currScores: Record<string, number>
+    config: MockConfig
+  }) => {
+    const settings = storageService.get('settings') as Record<string, unknown> | undefined
+    const provider = (settings?.aiProvider as string) || 'ollama'
+    mockService.setProvider(provider as 'ollama' | 'claude')
+    if (settings?.claudeModel) mockService.setClaudeModel(settings.claudeModel as string)
+
+    const onChunk = (chunkData: { text: string; done: boolean }): void => {
+      windowManager.sendToAll('mock:comparison-chunk', chunkData)
+    }
+    const onComplete = (comparison: unknown): void => {
+      windowManager.sendToAll('mock:comparison-complete', comparison)
+    }
+    const onError = (error: string): void => {
+      windowManager.sendToAll('mock:error', error)
+    }
+
+    mockService.on('mock:comparison-chunk', onChunk)
+    mockService.on('mock:comparison-complete', onComplete)
+    mockService.on('mock:error', onError)
+
+    try {
+      await mockService.compareAnswers(
+        data.question,
+        data.prevAnswer,
+        data.currAnswer,
+        data.prevScores,
+        data.currScores,
+        data.config
+      )
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      windowManager.sendToAll('mock:error', message)
+      return { success: false, error: message }
+    } finally {
+      mockService.removeListener('mock:comparison-chunk', onChunk)
+      mockService.removeListener('mock:comparison-complete', onComplete)
       mockService.removeListener('mock:error', onError)
     }
   })

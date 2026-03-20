@@ -5,6 +5,7 @@ import type { UserProfile } from './promptBuilder'
 import type { AIProvider, STTProvider, TranscriptResult } from './types'
 import { windowManager } from '../windows/windowManager'
 import { historyService } from './historyService'
+import { sessionContext } from './sessionContext'
 
 export type SessionState = 'idle' | 'active' | 'paused'
 
@@ -39,6 +40,7 @@ export class SessionManager extends EventEmitter {
     historyService.beginSession('interview')
     this.transcriptHistory = []
     questionDetector.reset()
+    sessionContext.reset()
 
     this.setupPipeline()
     audioCaptureService.start()
@@ -158,10 +160,17 @@ export class SessionManager extends EventEmitter {
       windowManager.sendToAll('ai:answer-complete', answer)
       if (this.currentQuestion) {
         const answerData = answer as { suggestedAnswer?: string; answerType?: string }
+        const answerText = answerData?.suggestedAnswer || ''
+        const answerType = answerData?.answerType || this.currentQuestion.type
         historyService.recordQuestion(
           this.currentQuestion.text,
-          answerData?.suggestedAnswer || '',
-          answerData?.answerType || this.currentQuestion.type
+          answerText,
+          answerType
+        )
+        sessionContext.addQuestionAnswer(
+          this.currentQuestion.text,
+          answerText,
+          answerType
         )
         this.currentQuestion = null
       }

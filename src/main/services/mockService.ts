@@ -1,8 +1,9 @@
 import { EventEmitter } from 'events'
 import { ollamaService } from './ollamaService'
 import { claudeService } from './claudeService'
-import { buildMockQuestionPrompt, buildMockEvaluationPrompt } from './promptBuilder'
+import { buildMockQuestionPrompt, buildMockEvaluationPrompt, buildComparisonPrompt } from './promptBuilder'
 import { extractJson } from './jsonParser'
+import { withRetry } from './retryHelper'
 
 export interface MockConfig {
   targetRole: string
@@ -16,9 +17,18 @@ export interface MockEvaluation {
   evidence: number
   structure: number
   authenticity: number
+  conciseness: number
   strengths: string[]
   improvements: string[]
   goldAnswer: string
+}
+
+export interface MockComparison {
+  improved: string[]
+  regressed: string[]
+  unchanged: string[]
+  overallDelta: number
+  advice: string
 }
 
 export class MockService extends EventEmitter {
@@ -96,20 +106,23 @@ export class MockService extends EventEmitter {
     const baseUrl = ollamaService.getBaseUrl()
     const model = ollamaService.getModel()
 
-    const response = await fetch(`${baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        stream: true,
-        options: { temperature: 0.7, num_predict: 1024 }
+    const response = await withRetry(
+      () => fetch(`${baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          stream: true,
+          options: { temperature: 0.7, num_predict: 1024 }
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -164,22 +177,25 @@ export class MockService extends EventEmitter {
     const apiKey = claudeService.getApiKey()
     if (!apiKey) throw new Error('Claude API key not configured')
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.claudeModel,
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-        stream: true
+    const response = await withRetry(
+      () => fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2025-01-01'
+        },
+        body: JSON.stringify({
+          model: this.claudeModel,
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+          stream: true
+        }),
+        signal: this.currentAbortController!.signal
       }),
-      signal: this.currentAbortController!.signal
-    })
+      { signal: this.currentAbortController!.signal }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -233,6 +249,43 @@ export class MockService extends EventEmitter {
     return fullText
   }
 
+  async compareAnswers(
+    question: string,
+    previousAnswer: string,
+    currentAnswer: string,
+    previousScores: Record<string, number>,
+    currentScores: Record<string, number>,
+    config: MockConfig
+  ): Promise<void> {
+    this.cancelCurrent()
+    this.currentAbortController = new AbortController()
+
+    const prompt = buildComparisonPrompt(
+      question,
+      previousAnswer,
+      currentAnswer,
+      previousScores,
+      currentScores,
+      config.targetRole
+    )
+
+    try {
+      this.emit('status', 'comparing')
+      const fullText = await this.streamPrompt(
+        'You are an expert interview coach comparing two candidate answers.',
+        prompt,
+        'mock:comparison-chunk'
+      )
+      const comparison = this.parseComparisonResult(fullText)
+      this.emit('mock:comparison-complete', comparison)
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') return
+      this.emit('mock:error', error instanceof Error ? error.message : String(error))
+    } finally {
+      this.currentAbortController = null
+    }
+  }
+
   private parseEvalResult(text: string): MockEvaluation {
     try {
       const jsonStr = extractJson(text)
@@ -243,6 +296,7 @@ export class MockService extends EventEmitter {
           evidence: Number(parsed.evidence) || 0,
           structure: Number(parsed.structure) || 0,
           authenticity: Number(parsed.authenticity) || 0,
+          conciseness: Number(parsed.conciseness) || 0,
           strengths: Array.isArray(parsed.strengths) ? (parsed.strengths as string[]) : [],
           improvements: Array.isArray(parsed.improvements) ? (parsed.improvements as string[]) : [],
           goldAnswer: (parsed.gold_answer as string) || ''
@@ -253,9 +307,35 @@ export class MockService extends EventEmitter {
     }
 
     return {
-      clarity: 5, evidence: 5, structure: 5, authenticity: 5,
+      clarity: 5, evidence: 5, structure: 5, authenticity: 5, conciseness: 5,
       strengths: ['Answer provided'], improvements: ['Could not parse AI evaluation'],
       goldAnswer: ''
+    }
+  }
+
+  private parseComparisonResult(text: string): MockComparison {
+    try {
+      const jsonStr = extractJson(text)
+      if (jsonStr) {
+        const parsed = JSON.parse(jsonStr) as Record<string, unknown>
+        return {
+          improved: Array.isArray(parsed.improved) ? (parsed.improved as string[]) : [],
+          regressed: Array.isArray(parsed.regressed) ? (parsed.regressed as string[]) : [],
+          unchanged: Array.isArray(parsed.unchanged) ? (parsed.unchanged as string[]) : [],
+          overallDelta: Number(parsed.overallDelta) || 0,
+          advice: (parsed.advice as string) || ''
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    return {
+      improved: [],
+      regressed: [],
+      unchanged: ['Could not parse comparison'],
+      overallDelta: 0,
+      advice: 'Unable to generate comparison. Please try again.'
     }
   }
 

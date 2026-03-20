@@ -1,9 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useHistoryStore } from '../../stores/historyStore'
 import Card, { SectionHeader } from '../ui/Card'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import { HistoryIcon, InterviewIcon, CodeIcon, ChevronRightIcon, BarChartIcon, TrashIcon } from '../ui/Icons'
+
+function useAnimatedNumber(target: number, duration = 1000) {
+  const [value, setValue] = useState(0)
+  const rafRef = useRef<number>(0)
+  useEffect(() => {
+    if (target === 0) { setValue(0); return }
+    const start = performance.now()
+    const animate = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1)
+      setValue(Math.round(target * progress))
+      if (progress < 1) rafRef.current = requestAnimationFrame(animate)
+    }
+    rafRef.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [target, duration])
+  return value
+}
 
 export default function HistoryPage() {
   const { sessions, analytics, isLoading, loadHistory, deleteSession, clearHistory } = useHistoryStore()
@@ -24,6 +41,10 @@ export default function HistoryPage() {
     const secs = seconds % 60
     return `${mins}m ${secs}s`
   }
+
+  const animatedSessions = useAnimatedNumber(analytics.totalSessions)
+  const animatedQuestions = useAnimatedNumber(analytics.totalQuestions)
+  const animatedTypes = useAnimatedNumber(Object.keys(analytics.typeBreakdown).length)
 
   if (isLoading) {
     return (
@@ -64,12 +85,12 @@ export default function HistoryPage() {
       {/* Analytics Dashboard */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'Sessions', value: analytics.totalSessions, color: 'var(--accent)' },
-          { label: 'Questions', value: analytics.totalQuestions, color: 'var(--success)' },
-          { label: 'Avg Duration', value: formatDuration(analytics.avgDuration), color: 'var(--warning)' },
-          { label: 'Types', value: Object.keys(analytics.typeBreakdown).length, color: '#6366f1' }
+          { label: 'Sessions', value: animatedSessions, color: 'var(--accent)', stagger: 'stagger-1' },
+          { label: 'Questions', value: animatedQuestions, color: 'var(--success)', stagger: 'stagger-2' },
+          { label: 'Avg Duration', value: formatDuration(analytics.avgDuration), color: 'var(--warning)', stagger: 'stagger-3' },
+          { label: 'Types', value: animatedTypes, color: '#6366f1', stagger: 'stagger-4' }
         ].map((stat) => (
-          <div key={stat.label} className="glass-panel p-4 text-center">
+          <div key={stat.label} className={`glass-panel p-4 text-center animate-slideIn ${stat.stagger}`}>
             <p className="text-2xl font-bold mb-1" style={{ color: stat.color }}>
               {stat.value}
             </p>
@@ -91,7 +112,7 @@ export default function HistoryPage() {
           <div className="space-y-2">
             {Object.entries(analytics.typeBreakdown)
               .sort(([, a], [, b]) => b - a)
-              .map(([type, count]) => {
+              .map(([type, count], idx) => {
                 const maxCount = Math.max(...Object.values(analytics.typeBreakdown))
                 const pct = (count / maxCount) * 100
                 return (
@@ -101,8 +122,13 @@ export default function HistoryPage() {
                     </span>
                     <div className="flex-1 h-5 rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
                       <div
-                        className="h-full rounded-lg transition-all duration-500"
-                        style={{ width: `${pct}%`, background: 'var(--accent-gradient)' }}
+                        className="h-full rounded-lg"
+                        style={{
+                          width: `${pct}%`,
+                          background: 'var(--accent-gradient)',
+                          transition: 'width 0.8s ease-out',
+                          animationDelay: `${idx * 80}ms`
+                        }}
                       />
                     </div>
                     <span className="text-xs font-bold w-8 text-right" style={{ color: 'var(--text-primary)' }}>
@@ -149,7 +175,7 @@ export default function HistoryPage() {
       {filtered.map((session) => {
         const isExpanded = expandedId === session.id
         return (
-          <Card key={session.id} padding="none">
+          <Card key={session.id} padding="none" className="animate-slideIn">
             <button
               className="w-full px-5 py-4 flex items-center gap-4 cursor-pointer transition-all"
               onClick={() => setExpandedId(isExpanded ? null : session.id)}

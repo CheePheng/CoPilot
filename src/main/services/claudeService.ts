@@ -4,6 +4,7 @@ import { buildSystemPrompt, buildAnswerPrompt, ANSWER_TOOL_SCHEMA } from './prom
 import type { UserProfile } from './promptBuilder'
 import type { DetectedQuestion } from './questionDetector'
 import type { AIProvider, AnswerResult } from './types'
+import { sessionContext } from './sessionContext'
 
 export { type AnswerResult } from './types'
 
@@ -32,7 +33,8 @@ export class ClaudeService extends EventEmitter implements AIProvider {
     this.cancelCurrent()
     this.currentAbortController = new AbortController()
     const systemPrompt = buildSystemPrompt(profile)
-    const userMessage = buildAnswerPrompt(question, recentContext)
+    const contextSummary = sessionContext.getSummary() || undefined
+    const userMessage = buildAnswerPrompt(question, recentContext, 45, contextSummary)
 
     try {
       this.emit('status', 'generating')

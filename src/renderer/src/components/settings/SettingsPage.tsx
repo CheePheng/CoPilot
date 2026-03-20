@@ -83,7 +83,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-fadeIn">
       {/* Ghost Mode Section */}
-      <Card padding="lg">
+      <Card padding="lg" className="animate-slideIn stagger-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
@@ -106,6 +106,9 @@ export default function SettingsPage() {
           </div>
           <button
             onClick={toggleGhost}
+            role="switch"
+            aria-checked={ghostMode}
+            aria-label="Toggle ghost mode"
             className="relative w-11 h-6 rounded-full cursor-pointer transition-all"
             style={{
               backgroundColor: ghostMode ? 'var(--success)' : 'var(--bg-elevated)',
@@ -124,7 +127,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* AI Provider */}
-      <Card padding="lg">
+      <Card padding="lg" className="animate-slideIn stagger-2">
         <div className="space-y-4">
           <SectionHeader>AI Provider</SectionHeader>
 
@@ -170,8 +173,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 {ollamaConnected === false && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
+                  <p className="text-xs mt-1 flex items-center gap-2" style={{ color: 'var(--danger)' }}>
                     Cannot connect — make sure Ollama is running
+                    <button
+                      onClick={checkOllama}
+                      className="underline cursor-pointer"
+                      style={{ color: 'var(--danger)' }}
+                    >
+                      Retry
+                    </button>
                   </p>
                 )}
               </div>
@@ -218,7 +228,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* STT Provider */}
-      <Card padding="lg">
+      <Card padding="lg" className="animate-slideIn stagger-3">
         <div className="space-y-4">
           <SectionHeader>Speech-to-Text</SectionHeader>
 
@@ -256,7 +266,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Keyboard Shortcuts */}
-      <Card padding="lg">
+      <Card padding="lg" className="animate-slideIn stagger-4">
         <SectionHeader>Keyboard Shortcuts</SectionHeader>
         <div className="space-y-2 mt-3">
           {[

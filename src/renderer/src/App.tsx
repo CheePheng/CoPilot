@@ -18,14 +18,13 @@ import { useSessionStore } from './stores/sessionStore'
 import { useSettingsStore } from './stores/settingsStore'
 import { useProfileStore } from './stores/profileStore'
 import './types/ipc'
+import type { Page } from './types/navigation'
 
 const SettingsPage = lazy(() => import('./components/settings/SettingsPage'))
 const ProfilePage = lazy(() => import('./components/profile/ProfilePage'))
 const MockInterviewPage = lazy(() => import('./components/mock/MockInterviewPage'))
 const CodingPage = lazy(() => import('./components/coding/CodingPage'))
 const HistoryPage = lazy(() => import('./components/history/HistoryPage'))
-
-type Page = 'interview' | 'coding' | 'practice' | 'history' | 'profile' | 'settings'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('interview')
@@ -61,7 +60,7 @@ export default function App() {
           className="flex-1 overflow-auto p-6"
           style={{ backgroundColor: 'var(--bg-primary)' }}
         >
-          <div key={currentPage} className="animate-fadeIn h-full">
+          <div key={currentPage} className="animate-fadeIn page-enter h-full">
             <ErrorBoundary>
               <Suspense fallback={<PageSkeleton />}>
                 {currentPage === 'interview' && <InterviewPage />}
@@ -214,38 +213,6 @@ function PageSkeleton() {
       <div className="flex gap-4">
         <SkeletonBlock className="flex-1" style={{ height: '300px' }} />
         <SkeletonBlock style={{ height: '300px', width: '420px' }} />
-      </div>
-    </div>
-  )
-}
-
-function PlaceholderPage({
-  title,
-  description,
-  Icon
-}: {
-  title: string
-  description: string
-  Icon: React.ComponentType<{ size?: number; className?: string }>
-}) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center">
-        <div className="mb-4 flex justify-center">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'var(--accent-subtle)',
-              boxShadow: 'var(--shadow-glow)'
-            }}
-          >
-            <Icon size={28} className="gradient-text" />
-          </div>
-        </div>
-        <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-          {title}
-        </h2>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{description}</p>
       </div>
     </div>
   )

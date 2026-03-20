@@ -60,9 +60,18 @@ export interface MockEvaluation {
   evidence: number
   structure: number
   authenticity: number
+  conciseness: number
   strengths: string[]
   improvements: string[]
   goldAnswer: string
+}
+
+export interface MockComparison {
+  improved: string[]
+  regressed: string[]
+  unchanged: string[]
+  overallDelta: number
+  advice: string
 }
 
 export interface MockConfig {
@@ -143,7 +152,7 @@ declare global {
         onComplete: (callback: (data: CodingResponse) => void) => () => void
         onError: (callback: (error: string) => void) => () => void
         pickImage: () => Promise<ImageData | null>
-        captureScreen: () => Promise<ImageData | null>
+        captureScreen: () => Promise<ImageData | string | null>
         generateFromImage: (request: CodingRequest & { image: ImageData }) => Promise<{ success: boolean }>
       }
       history: {
@@ -160,6 +169,9 @@ declare global {
         onEvalChunk: (callback: (data: StreamChunk) => void) => () => void
         onEvalComplete: (callback: (data: MockEvaluation) => void) => () => void
         onError: (callback: (error: string) => void) => () => void
+        compare: (question: string, prevAnswer: string, currAnswer: string, prevScores: Record<string, number>, currScores: Record<string, number>, config: any) => Promise<void>
+        onComparisonChunk: (cb: (chunk: string) => void) => () => void
+        onComparisonComplete: (cb: (result: any) => void) => () => void
       }
       transcript?: {
         onUpdate: (callback: (data: TranscriptEntry) => void) => () => void

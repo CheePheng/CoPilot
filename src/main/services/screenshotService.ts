@@ -1,6 +1,8 @@
 import { dialog, desktopCapturer } from 'electron'
-import { readFileSync } from 'fs'
+import { readFileSync, statSync } from 'fs'
 import { extname } from 'path'
+
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
 
 export interface ImageData {
   base64: string
@@ -28,6 +30,11 @@ class ScreenshotService {
     if (result.canceled || result.filePaths.length === 0) return null
 
     const filePath = result.filePaths[0]
+    const fileSize = statSync(filePath).size
+    if (fileSize > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error(`Image file exceeds the 10MB size limit (file is ${(fileSize / 1024 / 1024).toFixed(1)}MB)`)
+    }
+
     const ext = extname(filePath).toLowerCase()
     const mimeType = MIME_MAP[ext] || 'image/png'
     const buffer = readFileSync(filePath)
@@ -36,24 +43,26 @@ class ScreenshotService {
     return { base64, mimeType }
   }
 
-  async captureScreen(): Promise<ImageData | null> {
+  async captureScreen(): Promise<ImageData | string | null> {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
         thumbnailSize: { width: 1920, height: 1080 }
       })
 
-      if (sources.length === 0) return null
+      if (sources.length === 0) return 'Screen capture failed: no screen sources available'
 
       const source = sources[0]
       const thumbnail = source.thumbnail
 
-      if (thumbnail.isEmpty()) return null
+      if (thumbnail.isEmpty()) return 'Screen capture failed: thumbnail was empty'
 
       const base64 = thumbnail.toPNG().toString('base64')
       return { base64, mimeType: 'image/png' }
-    } catch {
-      return null
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error('captureScreen failed:', message)
+      return `Screen capture failed: ${message}`
     }
   }
 }

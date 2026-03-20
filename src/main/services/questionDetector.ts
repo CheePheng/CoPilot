@@ -122,6 +122,25 @@ export class QuestionDetector extends EventEmitter {
     return 'general'
   }
 
+  isFollowUp(question: string, previousQuestions: string[]): boolean {
+    if (previousQuestions.length === 0) return false
+    const significantWords = (text: string): Set<string> =>
+      new Set(text.split(/\s+/).filter(w => w.length >= 4).map(w => w.toLowerCase()))
+    const newWords = significantWords(question)
+    if (newWords.size === 0) return false
+    for (const prev of previousQuestions) {
+      const prevWords = significantWords(prev)
+      if (prevWords.size === 0) continue
+      let overlap = 0
+      for (const word of newWords) {
+        if (prevWords.has(word)) overlap++
+      }
+      const overlapRatio = overlap / newWords.size
+      if (overlapRatio > 0.3) return true
+    }
+    return false
+  }
+
   getRecentContext(): string {
     return this.recentTranscripts.map((t) => t.text).join(' ')
   }
